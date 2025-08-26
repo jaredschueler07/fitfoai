@@ -29,6 +29,7 @@ coroutines = "1.8.0"
 
 # Serialization
 kotlinxSerialization = "1.6.2"
+gson = "2.10.1"
 
 [libraries]
 # Core Android
@@ -74,6 +75,7 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 # Serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

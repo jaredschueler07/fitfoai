@@ -89,6 +89,7 @@ dependencies {
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.gson)
 
     // Testing
     testImplementation(libs.junit)
