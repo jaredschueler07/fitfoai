@@ -8,6 +8,13 @@ plugins {
     // alias(libs.plugins.ksp)
 }
 
+// Load API keys from local.properties
+val localProperties = java.util.Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+
 android {
     namespace = "com.runningcoach.v2"
     compileSdk = 36
@@ -20,6 +27,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Add API keys as build config fields
+        buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY", "")}\"")
+        buildConfigField("String", "ELEVENLABS_API_KEY", "\"${localProperties.getProperty("ELEVENLABS_API_KEY", "")}\"")
+        buildConfigField("String", "GOOGLE_MAPS_API_KEY", "\"${localProperties.getProperty("GOOGLE_MAPS_API_KEY", "")}\"")
+        buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"${localProperties.getProperty("SPOTIFY_CLIENT_ID", "")}\"")
+        buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"${localProperties.getProperty("SPOTIFY_CLIENT_SECRET", "")}\"")
+        buildConfigField("String", "SPOTIFY_REDIRECT_URI", "\"${localProperties.getProperty("SPOTIFY_REDIRECT_URI", "")}\"")
+        buildConfigField("String", "GOOGLE_FIT_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_FIT_CLIENT_ID", "")}\"")
         
         // Room database schema export - Disabled with KSP
         // ksp {
@@ -45,6 +61,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
