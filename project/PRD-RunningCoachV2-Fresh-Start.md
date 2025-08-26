@@ -3,16 +3,17 @@
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 1.1  
 **Created**: January 2025  
 **Status**: DRAFT - Ready for Implementation  
 **Priority**: HIGH  
+**Usage**: Personal Use Only  
 
 ---
 
 ## 📋 Executive Summary
 
-This PRD outlines the complete rebuild of the RunningCoachV2 Android application from scratch, incorporating lessons learned from previous development challenges, build issues, and version compatibility problems. The app will be a comprehensive AI-powered running coach with third-party integrations, real-time voice coaching, and advanced analytics.
+This PRD outlines the complete rebuild of the RunningCoachV2 Android application from scratch, incorporating lessons learned from previous development challenges, build issues, and version compatibility problems. The app will be a comprehensive AI-powered running coach with third-party integrations, real-time voice coaching, advanced analytics, and a new **Fitness Coach AI Agent** trained on personal app data.
 
 ## 🎯 Project Vision & Goals
 
@@ -21,7 +22,7 @@ Create the ultimate AI-powered running companion that provides personalized coac
 
 ### Core Objectives
 1. **Seamless Integration**: Connect with Google Fit and Spotify for comprehensive data sync
-2. **AI-Powered Coaching**: Provide intelligent, contextual coaching using Google Gemini and ElevenLabs TTS
+2. **AI-Powered Coaching**: Provide intelligent, contextual coaching using Google Gemini, ElevenLabs TTS, and a Fitness Coach AI Agent
 3. **Real-Time Guidance**: Deliver live audio coaching during runs with smart trigger systems
 4. **Comprehensive Analytics**: Track progress with advanced performance insights
 5. **Modern UX**: Implement dark-first design with Material 3 and Jetpack Compose
@@ -149,14 +150,29 @@ Room = "2.6.1"
 - **Audio priority system** for seamless music integration
 - **Coach personality selection** (Bennett, Mariana, Becs, Goggins)
 
-#### **C. Run Tracking & Analytics (Week 5-6)**
+#### **C. Fitness Coach AI Agent**
+- **Purpose**: Personalized fitness, workout, and diet advice.  
+- **Base Model**: GPT agent ("Fitness, Workout & Diet – PhD Coach").  
+- **Data Sources**: Health + fitness data from app (runs, HR, VO₂max, recovery, calories, sleep).  
+- **Capabilities**:  
+  - Adaptive training plan adjustments  
+  - Nutrition guidance linked to fitness goals  
+  - Contextual in-run coaching (HR zones, endurance advice)  
+  - Periodization planning (weekly/monthly strategy)  
+  - Explainable, patient-friendly feedback  
+- **Integration Points**:  
+  - AI Coach Tab → personalized plans and advice  
+  - Voice Coach → live contextual adjustments  
+  - Dashboard → summaries, weak points, recovery advice
+
+#### **D. Run Tracking & Analytics (Week 5-6)**
 - **GPS tracking** with high accuracy
 - **Real-time metrics** (pace, distance, time)
 - **Manual entry** for treadmill workouts
 - **Performance analytics** with trend analysis
 - **Goal progress tracking** with predictions
 
-#### **D. UI/UX Implementation (Week 7-8)**
+#### **E. UI/UX Implementation (Week 7-8)**
 **Design System Challenges**:
 - Implement dark-first theme with lime accent color (#84cc16)
 - Create consistent typography system (text-3xl headers, text-lg subheaders, text-sm body)
