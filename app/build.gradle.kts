@@ -3,8 +3,9 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.hilt)
-    alias(libs.plugins.ksp)
+    // Temporarily disable Hilt until we fix compatibility
+    // alias(libs.plugins.hilt)
+    // alias(libs.plugins.ksp)
 }
 
 android {
@@ -20,10 +21,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // Room database schema export
-        ksp {
-            arg("room.schemaLocation", "$projectDir/schemas")
-        }
+        // Room database schema export - Disabled with KSP
+        // ksp {
+        //     arg("room.schemaLocation", "$projectDir/schemas")
+        // }
     }
 
     buildTypes {
@@ -65,15 +66,15 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
-    // Hilt Dependency Injection
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    ksp(libs.hilt.compiler)
+    // Hilt Dependency Injection - Temporarily disabled
+    // implementation(libs.hilt.android)
+    // implementation(libs.hilt.navigation.compose)
+    // ksp(libs.hilt.compiler)
 
-    // Room Database
+    // Room Database - Temporarily using kapt instead of ksp
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
+    // ksp(libs.room.compiler)
 
     // Ktor HTTP Client
     implementation(libs.ktor.client.core)

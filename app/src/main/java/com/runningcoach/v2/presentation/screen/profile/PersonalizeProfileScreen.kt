@@ -1,0 +1,274 @@
+package com.runningcoach.v2.presentation.screen.profile
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.runningcoach.v2.domain.model.FitnessLevel
+import com.runningcoach.v2.domain.model.RunningGoal
+import com.runningcoach.v2.presentation.components.AppCard
+import com.runningcoach.v2.presentation.components.PrimaryButton
+import com.runningcoach.v2.presentation.theme.AppColors
+
+@Composable
+fun PersonalizeProfileScreen(
+    onComplete: (ProfileData) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var name by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var height by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("") }
+    var selectedFitnessLevel by remember { mutableStateOf(FitnessLevel.BEGINNER) }
+    var selectedRunningGoals by remember { mutableStateOf(setOf<RunningGoal>()) }
+
+    val scrollState = rememberScrollState()
+    
+    val isFormValid = name.isNotBlank() && age.isNotBlank() && 
+                     height.isNotBlank() && weight.isNotBlank()
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(AppColors.Background)
+            .padding(24.dp)
+            .verticalScroll(scrollState)
+    ) {
+        // Header
+        Text(
+            text = "Personalize Your Profile",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = AppColors.OnBackground,
+            modifier = Modifier.padding(top = 40.dp, bottom = 8.dp)
+        )
+        
+        Text(
+            text = "Help us customize your training experience",
+            style = MaterialTheme.typography.bodyLarge,
+            color = AppColors.Neutral400,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+
+        // Basic Info Section
+        AppCard(
+            modifier = Modifier.padding(bottom = 24.dp)
+        ) {
+            Text(
+                text = "Basic Information",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.OnSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            
+            // Name Field
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppColors.Primary,
+                    focusedLabelColor = AppColors.Primary,
+                    cursorColor = AppColors.Primary
+                )
+            )
+            
+            // Age Field
+            OutlinedTextField(
+                value = age,
+                onValueChange = { age = it },
+                label = { Text("Age") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppColors.Primary,
+                    focusedLabelColor = AppColors.Primary,
+                    cursorColor = AppColors.Primary
+                )
+            )
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Height Field
+                OutlinedTextField(
+                    value = height,
+                    onValueChange = { height = it },
+                    label = { Text("Height") },
+                    placeholder = { Text("5'8\"") },
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AppColors.Primary,
+                        focusedLabelColor = AppColors.Primary,
+                        cursorColor = AppColors.Primary
+                    )
+                )
+                
+                // Weight Field
+                OutlinedTextField(
+                    value = weight,
+                    onValueChange = { weight = it },
+                    label = { Text("Weight") },
+                    placeholder = { Text("150 lbs") },
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AppColors.Primary,
+                        focusedLabelColor = AppColors.Primary,
+                        cursorColor = AppColors.Primary
+                    )
+                )
+            }
+        }
+
+        // Fitness Level Section
+        AppCard(
+            modifier = Modifier.padding(bottom = 24.dp)
+        ) {
+            Text(
+                text = "Fitness Level",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.OnSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            
+            FitnessLevel.entries.forEach { level ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    RadioButton(
+                        selected = selectedFitnessLevel == level,
+                        onClick = { selectedFitnessLevel = level },
+                        colors = RadioButtonDefaults.colors(
+                            selectedColor = AppColors.Primary
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = level.name.lowercase().replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = AppColors.OnSurface
+                        )
+                        Text(
+                            text = getFitnessLevelDescription(level),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.Neutral400
+                        )
+                    }
+                }
+            }
+        }
+
+        // Running Goals Section
+        AppCard(
+            modifier = Modifier.padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Running Goals",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.OnSurface,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            Text(
+                text = "Select all that apply",
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.Neutral400,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            
+            RunningGoal.entries.forEach { goal ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Checkbox(
+                        checked = selectedRunningGoals.contains(goal),
+                        onCheckedChange = { checked ->
+                            selectedRunningGoals = if (checked) {
+                                selectedRunningGoals + goal
+                            } else {
+                                selectedRunningGoals - goal
+                            }
+                        },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = AppColors.Primary
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = getRunningGoalDisplayName(goal),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.OnSurface,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+            }
+        }
+
+        // Continue Button
+        PrimaryButton(
+            text = "Continue",
+            onClick = {
+                onComplete(
+                    ProfileData(
+                        name = name,
+                        age = age.toIntOrNull() ?: 0,
+                        height = height,
+                        weight = weight,
+                        fitnessLevel = selectedFitnessLevel,
+                        runningGoals = selectedRunningGoals.toList()
+                    )
+                )
+            },
+            enabled = isFormValid
+        )
+    }
+}
+
+data class ProfileData(
+    val name: String,
+    val age: Int,
+    val height: String,
+    val weight: String,
+    val fitnessLevel: FitnessLevel,
+    val runningGoals: List<RunningGoal>
+)
+
+private fun getFitnessLevelDescription(level: FitnessLevel): String {
+    return when (level) {
+        FitnessLevel.BEGINNER -> "New to running or returning after a break"
+        FitnessLevel.INTERMEDIATE -> "Regular runner, comfortable with 3-5 miles"
+        FitnessLevel.ADVANCED -> "Experienced runner, comfortable with 10+ miles"
+        FitnessLevel.EXPERT -> "Competitive runner with extensive training experience"
+    }
+}
+
+private fun getRunningGoalDisplayName(goal: RunningGoal): String {
+    return when (goal) {
+        RunningGoal.GENERAL_FITNESS -> "General Fitness"
+        RunningGoal.WEIGHT_LOSS -> "Weight Loss"
+        RunningGoal.ENDURANCE -> "Build Endurance"
+        RunningGoal.SPEED -> "Improve Speed"
+        RunningGoal.RACE_TRAINING -> "Race Training"
+    }
+}

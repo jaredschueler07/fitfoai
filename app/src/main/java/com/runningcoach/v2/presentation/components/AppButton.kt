@@ -87,7 +87,8 @@ fun CompactButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     backgroundColor: Color = AppColors.Primary,
-    contentColor: Color = AppColors.OnPrimary
+    contentColor: Color = AppColors.OnPrimary,
+    content: (@Composable () -> Unit)? = null
 ) {
     Button(
         onClick = onClick,
@@ -108,10 +109,14 @@ fun CompactButton(
             bottom = 8.dp
         )
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
-        )
+        if (content != null) {
+            content()
+        } else {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
