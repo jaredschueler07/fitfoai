@@ -23,6 +23,7 @@ import com.runningcoach.v2.presentation.theme.AppColors
 @Composable
 fun DashboardScreen(
     userName: String = "Runner",
+    onStartRun: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -111,7 +112,7 @@ fun DashboardScreen(
                         
                         CompactButton(
                             text = "Start",
-                            onClick = { /* TODO: Start workout */ },
+                            onClick = onStartRun,
                             backgroundColor = AppColors.Primary,
                             contentColor = AppColors.OnPrimary
                         ) {

@@ -10,6 +10,7 @@ sealed class Screen(val route: String) {
     object AICoach : Screen("ai_coach")
     object Progress : Screen("progress")
     object Profile : Screen("profile")
+    object RunTracking : Screen("run_tracking")
     
     // Bottom navigation items
     companion object {

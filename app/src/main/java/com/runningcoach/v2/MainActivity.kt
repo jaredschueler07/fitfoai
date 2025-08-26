@@ -21,6 +21,7 @@ import com.runningcoach.v2.presentation.screen.dashboard.DashboardScreen
 import com.runningcoach.v2.presentation.screen.goal.SetEventGoalScreen
 import com.runningcoach.v2.presentation.screen.profile.PersonalizeProfileScreen
 import com.runningcoach.v2.presentation.screen.welcome.WelcomeScreen
+import com.runningcoach.v2.presentation.screen.runtracking.RunTrackingScreen
 import com.runningcoach.v2.presentation.theme.RunningCoachTheme
 // import dagger.hilt.android.AndroidEntryPoint
 
@@ -104,7 +105,10 @@ fun RunningCoachApp() {
             // Main App Screens (with bottom navigation)
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
-                    userName = "Jane" // In real app, get from user data
+                    userName = "Jane", // In real app, get from user data
+                    onStartRun = {
+                        navController.navigate(Screen.RunTracking.route)
+                    }
                 )
             }
             
@@ -120,6 +124,15 @@ fun RunningCoachApp() {
             composable(Screen.Profile.route) {
                 // Placeholder for now - will implement in Phase 3
                 DashboardScreen(userName = "Profile Settings Coming Soon")
+            }
+            
+            // Run Tracking Screen
+            composable(Screen.RunTracking.route) {
+                RunTrackingScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
             }
         }
     }
