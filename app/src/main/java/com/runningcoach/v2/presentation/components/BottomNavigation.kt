@@ -140,7 +140,7 @@ fun AppBottomNavigation(
             },
             selected = currentRoute == Screen.Profile.route,
             onClick = {
-                if (currentRoute != Screen.Progress.route) {
+                if (currentRoute != Screen.Profile.route) {
                     navController.navigate(Screen.Profile.route) {
                         popUpTo(navController.graph.startDestinationId) {
                             saveState = true

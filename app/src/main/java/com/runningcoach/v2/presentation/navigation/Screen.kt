@@ -13,24 +13,24 @@ sealed class Screen(val route: String) {
     
     // Bottom navigation items
     companion object {
-        val bottomNavItems = listOf(
+        fun getBottomNavItems() = listOf(
             BottomNavItem(
-                route = Dashboard.route,
+                route = "dashboard",
                 label = "Home",
                 icon = "home"
             ),
             BottomNavItem(
-                route = AICoach.route,
+                route = "ai_coach",
                 label = "AI Coach", 
                 icon = "chat"
             ),
             BottomNavItem(
-                route = Progress.route,
+                route = "progress",
                 label = "Progress",
                 icon = "chart"
             ),
             BottomNavItem(
-                route = Profile.route,
+                route = "profile",
                 label = "Profile",
                 icon = "profile"
             )
