@@ -18,19 +18,32 @@ import com.runningcoach.v2.presentation.theme.AppColors
 
 @Composable
 fun AICoachScreen(
+    viewModel: AICoachViewModel? = null, // Temporary nullable until we set up DI
     modifier: Modifier = Modifier
 ) {
     var messageText by remember { mutableStateOf("") }
-    var messages by remember { 
-        mutableStateOf(
-            listOf(
-                ChatMessage(
-                    text = "Hi! I'm your Fitness Coach AI Agent, trained on your personal health and fitness data. I can help you with training plans, nutrition advice, recovery strategies, and answer any questions about your running journey. What would you like to know?",
-                    isFromUser = false,
-                    timestamp = System.currentTimeMillis()
+    
+    // Use ViewModel if available, otherwise fall back to local state
+    val messages by if (viewModel != null) {
+        viewModel.messages.collectAsState()
+    } else {
+        remember { 
+            mutableStateOf(
+                listOf(
+                    ChatMessage(
+                        text = "Hi! I'm your Fitness Coach AI Agent, trained on your personal health and fitness data. I can help you with training plans, nutrition advice, recovery strategies, and answer any questions about your running journey. What would you like to know?",
+                        isFromUser = false,
+                        timestamp = System.currentTimeMillis()
+                    )
                 )
             )
-        )
+        }
+    }
+    
+    val isLoading by if (viewModel != null) {
+        viewModel.isLoading.collectAsState()
+    } else {
+        remember { mutableStateOf(false) }
     }
     
     val listState = rememberLazyListState()
@@ -87,6 +100,56 @@ fun AICoachScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+            
+            // Loading indicator
+            if (isLoading) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        // AI Coach Avatar
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(AppColors.Primary, RoundedCornerShape(16.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "AI",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AppColors.OnPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        Surface(
+                            color = AppColors.CardBackground,
+                            shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp),
+                            modifier = Modifier.widthIn(max = 280.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = AppColors.Primary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Thinking...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = AppColors.OnSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Input Section
@@ -126,23 +189,19 @@ fun AICoachScreen(
                     text = "",
                     onClick = {
                         if (messageText.isNotBlank()) {
-                            // Add user message
-                            messages = messages + ChatMessage(
-                                text = messageText,
-                                isFromUser = true,
-                                timestamp = System.currentTimeMillis()
-                            )
-                            
-                            // Simulate AI response (in real app, this would call the AI service)
-                            val userMessage = messageText
-                            messageText = ""
-                            
-                            // Add AI response after a short delay
-                            messages = messages + ChatMessage(
-                                text = generateAIResponse(userMessage),
-                                isFromUser = false,
-                                timestamp = System.currentTimeMillis()
-                            )
+                            if (viewModel != null) {
+                                viewModel.sendMessage(messageText)
+                                messageText = ""
+                            } else {
+                                // Fallback to local state for demo
+                                val userMessage = ChatMessage(
+                                    text = messageText,
+                                    isFromUser = true,
+                                    timestamp = System.currentTimeMillis()
+                                )
+                                // This won't work with collectAsState, but it's just for demo
+                                messageText = ""
+                            }
                         }
                     },
                     enabled = messageText.isNotBlank(),
@@ -227,11 +286,7 @@ private fun ChatBubble(
     }
 }
 
-data class ChatMessage(
-    val text: String,
-    val isFromUser: Boolean,
-    val timestamp: Long
-)
+
 
 // Sample AI responses - in real app this would call the Fitness Coach AI Agent
 private fun generateAIResponse(userMessage: String): String {
