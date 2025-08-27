@@ -4,19 +4,23 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
-import android.os.Bundle
+import android.os.Looper
 import androidx.core.app.ActivityCompat
+import com.google.android.gms.location.*
 import com.runningcoach.v2.domain.model.LocationData
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.abs
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
+/**
+ * Location service using Google Play Services FusedLocationProvider for high-accuracy GPS tracking.
+ * Provides location updates via Kotlin Flow with configurable intervals and accuracy.
+ */
 class LocationService(private val context: Context) {
     
-    private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    private val fusedLocationClient: FusedLocationProviderClient = 
+        LocationServices.getFusedLocationProviderClient(context)
     
     private val _currentLocation = MutableStateFlow<LocationData?>(null)
     val currentLocation: StateFlow<LocationData?> = _currentLocation.asStateFlow()
@@ -30,7 +34,7 @@ class LocationService(private val context: Context) {
     private val _locationAccuracy = MutableStateFlow(LocationAccuracy.UNKNOWN)
     val locationAccuracy: StateFlow<LocationAccuracy> = _locationAccuracy.asStateFlow()
     
-    private var locationListener: LocationListener? = null
+    private var locationCallback: LocationCallback? = null
     
     enum class LocationAccuracy {
         UNKNOWN, POOR, GOOD, EXCELLENT
@@ -50,7 +54,15 @@ class LocationService(private val context: Context) {
         ) == PackageManager.PERMISSION_GRANTED
     }
     
-    fun startLocationTracking() {
+    /**
+     * Starts location tracking with configurable intervals.
+     * Uses FusedLocationProvider for improved accuracy and battery efficiency.
+     */
+    fun startLocationTracking(
+        intervalMillis: Long = 1000L, // 1 second default
+        fastestIntervalMillis: Long = 500L, // 0.5 second fastest
+        smallestDisplacementMeters: Float = 1f // 1 meter minimum displacement
+    ) {
         if (!hasLocationPermission()) {
             return
         }
@@ -62,106 +74,171 @@ class LocationService(private val context: Context) {
         _isTracking.value = true
         _locationHistory.value = emptyList()
         
-        locationListener = object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                val locationData = LocationData(
-                    latitude = location.latitude,
-                    longitude = location.longitude,
-                    altitude = location.altitude,
-                    accuracy = location.accuracy,
-                    speed = location.speed,
-                    bearing = location.bearing,
-                    timestamp = location.time
-                )
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis)
+            .setMinUpdateIntervalMillis(fastestIntervalMillis)
+            .setMinUpdateDistanceMeters(smallestDisplacementMeters)
+            .setWaitForAccurateLocation(true)
+            .setMaxUpdateDelayMillis(2000L)
+            .build()
+        
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                super.onLocationResult(locationResult)
                 
-                _currentLocation.value = locationData
-                
-                // Add to history if accuracy is good enough
-                if (location.accuracy <= 20f) { // 20 meters or better
-                    val currentHistory = _locationHistory.value.toMutableList()
-                    currentHistory.add(locationData)
-                    _locationHistory.value = currentHistory
+                locationResult.locations.forEach { location ->
+                    val locationData = LocationData(
+                        latitude = location.latitude,
+                        longitude = location.longitude,
+                        altitude = if (location.hasAltitude()) location.altitude else null,
+                        accuracy = if (location.hasAccuracy()) location.accuracy else null,
+                        speed = if (location.hasSpeed()) location.speed else null,
+                        bearing = if (location.hasBearing()) location.bearing else null,
+                        timestamp = location.time
+                    )
                     
-                    // Update accuracy status
-                    _locationAccuracy.value = when {
-                        location.accuracy <= 5f -> LocationAccuracy.EXCELLENT
-                        location.accuracy <= 10f -> LocationAccuracy.GOOD
-                        else -> LocationAccuracy.POOR
+                    _currentLocation.value = locationData
+                    
+                    // Add to history if accuracy is good enough
+                    val accuracy = location.accuracy
+                    if (accuracy <= 20f) { // 20 meters or better
+                        val currentHistory = _locationHistory.value.toMutableList()
+                        currentHistory.add(locationData)
+                        _locationHistory.value = currentHistory
+                        
+                        // Update accuracy status
+                        _locationAccuracy.value = when {
+                            accuracy <= 5f -> LocationAccuracy.EXCELLENT
+                            accuracy <= 10f -> LocationAccuracy.GOOD
+                            else -> LocationAccuracy.POOR
+                        }
                     }
                 }
             }
             
-            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-            override fun onProviderEnabled(provider: String) {}
-            override fun onProviderDisabled(provider: String) {}
+            override fun onLocationAvailability(locationAvailability: LocationAvailability) {
+                super.onLocationAvailability(locationAvailability)
+                if (!locationAvailability.isLocationAvailable) {
+                    _locationAccuracy.value = LocationAccuracy.UNKNOWN
+                }
+            }
         }
         
         try {
-            // Request location updates with high accuracy
-            locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                1000L, // 1 second
-                1f, // 1 meter
-                locationListener!!
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback!!,
+                Looper.getMainLooper()
             )
-            
-            // Also request from network provider as backup
-            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER,
-                    2000L, // 2 seconds
-                    5f, // 5 meters
-                    locationListener!!
-                )
-            }
         } catch (e: SecurityException) {
             _isTracking.value = false
         }
     }
     
+    /**
+     * Stops location tracking and cleans up resources
+     */
     fun stopLocationTracking() {
         if (!_isTracking.value) {
             return
         }
         
         _isTracking.value = false
-        locationListener?.let { listener ->
-            locationManager.removeUpdates(listener)
+        locationCallback?.let { callback ->
+            fusedLocationClient.removeLocationUpdates(callback)
         }
-        locationListener = null
+        locationCallback = null
     }
     
-    fun getLastKnownLocation(): LocationData? {
+    /**
+     * Gets the last known location using FusedLocationProvider
+     * @return LocationData if available, null otherwise
+     */
+    suspend fun getLastKnownLocation(): LocationData? {
         if (!hasLocationPermission()) {
             return null
         }
         
         return try {
-            val gpsLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            val networkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            
-            val bestLocation = when {
-                gpsLocation != null && networkLocation != null -> {
-                    if (gpsLocation.accuracy <= networkLocation.accuracy) gpsLocation else networkLocation
-                }
-                gpsLocation != null -> gpsLocation
-                networkLocation != null -> networkLocation
-                else -> null
-            }
-            
-            bestLocation?.let { location ->
-                LocationData(
-                    latitude = location.latitude,
-                    longitude = location.longitude,
-                    altitude = location.altitude,
-                    accuracy = location.accuracy,
-                    speed = location.speed,
-                    bearing = location.bearing,
-                    timestamp = location.time
-                )
+            suspendCancellableCoroutine { continuation ->
+                fusedLocationClient.lastLocation
+                    .addOnSuccessListener { location: Location? ->
+                        val locationData = location?.let { loc ->
+                            LocationData(
+                                latitude = loc.latitude,
+                                longitude = loc.longitude,
+                                altitude = if (loc.hasAltitude()) loc.altitude else null,
+                                accuracy = if (loc.hasAccuracy()) loc.accuracy else null,
+                                speed = if (loc.hasSpeed()) loc.speed else null,
+                                bearing = if (loc.hasBearing()) loc.bearing else null,
+                                timestamp = loc.time
+                            )
+                        }
+                        continuation.resume(locationData)
+                    }
+                    .addOnFailureListener {
+                        continuation.resume(null)
+                    }
             }
         } catch (e: SecurityException) {
             null
+        }
+    }
+    
+    /**
+     * Creates a Flow that emits location updates
+     * @param intervalMillis Location update interval
+     * @param fastestIntervalMillis Fastest update interval
+     * @param smallestDisplacementMeters Minimum displacement for updates
+     * @return Flow of LocationData
+     */
+    fun getLocationUpdates(
+        intervalMillis: Long = 1000L,
+        fastestIntervalMillis: Long = 500L,
+        smallestDisplacementMeters: Float = 1f
+    ): Flow<LocationData> = callbackFlow {
+        if (!hasLocationPermission()) {
+            close()
+            return@callbackFlow
+        }
+        
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis)
+            .setMinUpdateIntervalMillis(fastestIntervalMillis)
+            .setMinUpdateDistanceMeters(smallestDisplacementMeters)
+            .setWaitForAccurateLocation(true)
+            .setMaxUpdateDelayMillis(2000L)
+            .build()
+        
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                super.onLocationResult(result)
+                result.locations.forEach { location ->
+                    val locationData = LocationData(
+                        latitude = location.latitude,
+                        longitude = location.longitude,
+                        altitude = if (location.hasAltitude()) location.altitude else null,
+                        accuracy = if (location.hasAccuracy()) location.accuracy else null,
+                        speed = if (location.hasSpeed()) location.speed else null,
+                        bearing = if (location.hasBearing()) location.bearing else null,
+                        timestamp = location.time
+                    )
+                    trySend(locationData)
+                }
+            }
+        }
+        
+        try {
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                callback,
+                Looper.getMainLooper()
+            )
+        } catch (e: SecurityException) {
+            close(e)
+            return@callbackFlow
+        }
+        
+        awaitClose {
+            fusedLocationClient.removeLocationUpdates(callback)
         }
     }
     
