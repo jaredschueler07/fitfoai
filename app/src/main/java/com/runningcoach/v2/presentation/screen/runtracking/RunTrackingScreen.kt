@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -17,299 +18,329 @@ import androidx.compose.ui.unit.sp
 import com.runningcoach.v2.presentation.theme.AppColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runningcoach.v2.presentation.components.AppCard
 import com.runningcoach.v2.presentation.components.icons.*
 
 @Composable
 fun RunTrackingScreen(
+    viewModel: RunTrackingViewModel,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isTracking by remember { mutableStateOf(false) }
-    var distance by remember { mutableStateOf("0.00") }
-    var duration by remember { mutableStateOf("00:00") }
-    var pace by remember { mutableStateOf("--:--") }
-    var speed by remember { mutableStateOf("0.0") }
-    var calories by remember { mutableStateOf("0") }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
-    // Voice coaching state
-    var isVoiceCoachingEnabled by remember { mutableStateOf(true) }
-    var currentCoachingPhase by remember { mutableStateOf("Warmup") }
-    var isVoiceCoachingPlaying by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        // Request location permissions when screen loads
+        if (!uiState.hasLocationPermission && !uiState.permissionRequested) {
+            viewModel.requestLocationPermissions()
+        }
+    }
     
-    Column(
+    // Handle errors with snackbar or dialog
+    uiState.error?.let { error ->
+        LaunchedEffect(error) {
+            // Show error and clear it
+            // In real app, show snackbar here
+            viewModel.clearError()
+        }
+    }
+    
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(AppColors.Background)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-                         IconButton(onClick = onNavigateBack) {
-                 ChevronRightIcon(tint = AppColors.OnSurface)
-             }
-            
-            Text(
-                text = "Run Tracking",
-                style = MaterialTheme.typography.headlineMedium,
-                color = AppColors.OnSurface,
-                fontWeight = FontWeight.Bold
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        AppColors.GradientStart,
+                        AppColors.GradientEnd
+                    )
+                )
             )
-            
-            IconButton(onClick = { /* Settings */ }) {
-                SettingsIcon(tint = AppColors.OnSurface)
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        // Main metrics display
-        AppCard(
-            modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Distance (main metric)
-                Text(
-                    text = distance,
-                    style = MaterialTheme.typography.displayLarge,
-                    color = AppColors.Primary,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "kilometers",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AppColors.Neutral500
-                )
-                
-                Spacer(modifier = Modifier.height(32.dp))
-                
-                // Secondary metrics row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    MetricItem(
-                        value = duration,
-                        label = "Duration",
-                        icon = { ClockIcon(tint = AppColors.Primary) }
-                    )
-                    MetricItem(
-                        value = pace,
-                        label = "Pace",
-                        icon = { SpeedIcon(tint = AppColors.Primary) }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    MetricItem(
-                        value = speed,
-                        label = "Speed",
-                        icon = { SpeedIcon(tint = AppColors.Primary) }
-                    )
-                    MetricItem(
-                        value = calories,
-                        label = "Calories",
-                        icon = { FireIcon(tint = AppColors.Primary) }
-                    )
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        // GPS Status
-        AppCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+            // Header with Athletic Style
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isTracking) Color.Green else Color.Red
-                        )
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = if (isTracking) "GPS Active" else "GPS Inactive",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.OnSurface
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Voice Coaching Controls
-        AppCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "AI Voice Coach",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = AppColors.OnSurface,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = if (isVoiceCoachingEnabled) "Phase: $currentCoachingPhase" else "Disabled",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.Neutral400
-                        )
-                    }
-                    
-                    Switch(
-                        checked = isVoiceCoachingEnabled,
-                        onCheckedChange = { isVoiceCoachingEnabled = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = AppColors.Primary,
-                            checkedTrackColor = AppColors.Primary.copy(alpha = 0.5f)
-                        )
-                    )
+                IconButton(onClick = onNavigateBack) {
+                    ChevronRightIcon(tint = Color.White)
                 }
                 
-                if (isVoiceCoachingEnabled) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "RUN TRACKING",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                IconButton(onClick = { /* Settings */ }) {
+                    SettingsIcon(tint = Color.White)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Main Metrics Display with Athletic Cards
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = AppColors.Surface.copy(alpha = 0.9f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Distance (main metric) with coral accent
+                    Text(
+                        text = uiState.formattedDistance.split("km")[0].split("m")[0],
+                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 56.sp),
+                        color = AppColors.CoralAccent,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (uiState.formattedDistance.contains("km")) "kilometers" else "meters",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
                     
-                    // Voice coaching status
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isVoiceCoachingPlaying) AppColors.Primary else AppColors.Neutral500
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isVoiceCoachingPlaying) "Speaking..." else "Listening",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.OnSurface
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Manual coaching buttons
+                    // Metrics Grid
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Button(
-                            onClick = { /* Provide motivation */ },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AppColors.Primary.copy(alpha = 0.1f),
-                                contentColor = AppColors.Primary
+                        MetricCard(
+                            value = uiState.formattedDuration,
+                            label = "Duration",
+                            icon = Icons.Default.PlayArrow
+                        )
+                        MetricCard(
+                            value = if (uiState.currentMetrics.currentPace > 0) {
+                                val pace = uiState.currentMetrics.currentPace
+                                val minutes = pace.toInt()
+                                val seconds = ((pace - minutes) * 60).toInt()
+                                "$minutes:${seconds.toString().padStart(2, '0')}"
+                            } else "--:--",
+                            label = "Current Pace",
+                            icon = Icons.Default.Add
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        MetricCard(
+                            value = uiState.formattedSpeed,
+                            label = "Speed",
+                            icon = Icons.Default.ArrowForward
+                        )
+                        MetricCard(
+                            value = "${uiState.currentMetrics.caloriesBurned}",
+                            label = "Calories",
+                            icon = Icons.Default.Star
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            // GPS Status Card with Athletic Styling
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = AppColors.Surface.copy(alpha = 0.8f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val gpsColor = when (uiState.gpsStatus) {
+                        GPSStatus.EXCELLENT -> AppColors.GPSExcellent
+                        GPSStatus.GOOD -> AppColors.GPSGood
+                        GPSStatus.FAIR -> AppColors.GPSFair
+                        GPSStatus.POOR -> AppColors.GPSPoor
+                        GPSStatus.SIGNAL_LOST -> AppColors.Error
+                        else -> AppColors.GPSInactive
+                    }
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(gpsColor)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "GPS: ${uiState.gpsStatus.name.replace("_", " ")}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                        if (uiState.locationPointCount > 0) {
+                            Text(
+                                text = "${uiState.locationPointCount} points tracked",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
                             )
-                        ) {
-                            Text("Motivate", style = MaterialTheme.typography.labelSmall)
-                        }
-                        
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        Button(
-                            onClick = { /* Provide form tips */ },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AppColors.Primary.copy(alpha = 0.1f),
-                                contentColor = AppColors.Primary
-                            )
-                        ) {
-                            Text("Form Tips", style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
             }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Athletic Control Buttons
+            when {
+                uiState.showStartButton -> {
+                    CircularStartButton(
+                        onClick = { viewModel.startRunSession() },
+                        isLoading = uiState.isLoading
+                    )
+                }
+                uiState.showPauseButton -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        CircularActionButton(
+                            onClick = { viewModel.pauseRunSession() },
+                            icon = Icons.Default.Settings,
+                            label = "Pause",
+                            backgroundColor = AppColors.CoralAccentSecondary
+                        )
+                        CircularActionButton(
+                            onClick = { viewModel.endRunSession() },
+                            icon = Icons.Default.Close,
+                            label = "Stop",
+                            backgroundColor = AppColors.Error
+                        )
+                    }
+                }
+                uiState.showResumeButton -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        CircularActionButton(
+                            onClick = { viewModel.resumeRunSession() },
+                            icon = Icons.Default.PlayArrow,
+                            label = "Resume",
+                            backgroundColor = AppColors.CoralAccent
+                        )
+                        CircularActionButton(
+                            onClick = { viewModel.endRunSession() },
+                            icon = Icons.Default.Close,
+                            label = "Stop",
+                            backgroundColor = AppColors.Error
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
-        
-        Spacer(modifier = Modifier.weight(1f))
-        
-        // Control buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+    }
+}
+
+@Composable
+private fun MetricCard(
+    value: String,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.width(140.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = AppColors.DeepBlue.copy(alpha = 0.6f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (!isTracking) {
-                Button(
-                    onClick = { isTracking = true },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        PlayIcon(tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Start Run")
-                    }
-                }
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = AppColors.CoralAccent,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun CircularStartButton(
+    onClick: () -> Unit,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.size(120.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        FloatingActionButton(
+            onClick = onClick,
+            modifier = Modifier.size(120.dp),
+            shape = CircleShape,
+            containerColor = AppColors.CoralAccent,
+            contentColor = Color.White
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(40.dp),
+                    color = Color.White,
+                    strokeWidth = 4.dp
+                )
             } else {
-                Button(
-                    onClick = { isTracking = false },
-                    modifier = Modifier.weight(1f)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        PauseIcon(tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Pause")
-                    }
-                }
-                
-                Spacer(modifier = Modifier.width(16.dp))
-                
-                Button(
-                    onClick = { 
-                        isTracking = false
-                        // Reset metrics
-                        distance = "0.00"
-                        duration = "00:00"
-                        pace = "--:--"
-                        speed = "0.0"
-                        calories = "0"
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        StopIcon(tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Stop")
-                    }
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Start Run",
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Text(
+                        text = "START",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -317,108 +348,36 @@ fun RunTrackingScreen(
 }
 
 @Composable
-private fun MetricItem(
-    value: String,
+private fun CircularActionButton(
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    icon: @Composable () -> Unit,
+    backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        icon()
+        FloatingActionButton(
+            onClick = onClick,
+            modifier = modifier.size(80.dp),
+            shape = CircleShape,
+            containerColor = backgroundColor,
+            contentColor = Color.White
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(32.dp)
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            color = AppColors.OnSurface,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.Neutral500,
-            textAlign = TextAlign.Center
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            fontWeight = FontWeight.Medium
         )
     }
 }
 
-// Additional icons for run tracking
-@Composable
-fun ClockIcon(
-    modifier: Modifier = Modifier,
-    tint: Color = AppColors.OnSurface
-) {
-    Icon(
-        imageVector = Icons.Default.Settings,
-        contentDescription = "Clock",
-        modifier = modifier,
-        tint = tint
-    )
-}
-
-@Composable
-fun SpeedIcon(
-    modifier: Modifier = Modifier,
-    tint: Color = AppColors.OnSurface
-) {
-    Icon(
-        imageVector = Icons.Default.Settings,
-        contentDescription = "Speed",
-        modifier = modifier,
-        tint = tint
-    )
-}
-
-@Composable
-fun FireIcon(
-    modifier: Modifier = Modifier,
-    tint: Color = AppColors.OnSurface
-) {
-    Icon(
-        imageVector = Icons.Default.Settings,
-        contentDescription = "Calories",
-        modifier = modifier,
-        tint = tint
-    )
-}
-
-@Composable
-fun PlayIcon(
-    modifier: Modifier = Modifier,
-    tint: Color = AppColors.OnSurface
-) {
-    Icon(
-        imageVector = Icons.Default.PlayArrow,
-        contentDescription = "Play",
-        modifier = modifier,
-        tint = tint
-    )
-}
-
-@Composable
-fun PauseIcon(
-    modifier: Modifier = Modifier,
-    tint: Color = AppColors.OnSurface
-) {
-    Icon(
-        imageVector = Icons.Default.Settings,
-        contentDescription = "Pause",
-        modifier = modifier,
-        tint = tint
-    )
-}
-
-@Composable
-fun StopIcon(
-    modifier: Modifier = Modifier,
-    tint: Color = AppColors.OnSurface
-) {
-    Icon(
-        imageVector = Icons.Default.Settings,
-        contentDescription = "Stop",
-        modifier = modifier,
-        tint = tint
-    )
-}

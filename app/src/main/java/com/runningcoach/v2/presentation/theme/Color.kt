@@ -2,25 +2,33 @@ package com.runningcoach.v2.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Dark Theme First Design (based on wireframe)
+// Athletic Blue Gradient Theme with Coral Accents
 object AppColors {
-    // Primary Colors - Lime Accent (#84cc16)
-    val Primary = Color(0xFF84cc16)      // lime-400
-    val PrimaryVariant = Color(0xFF65a30d) // lime-600
-    val OnPrimary = Color(0xFF000000)    // Black text on lime
+    // Athletic Blue Gradient Colors
+    val DeepBlue = Color(0xFF1e3a5f)     // Deep blue gradient start
+    val AthleteBlue = Color(0xFF4a7c97)   // Deep blue gradient end
+    val CoralAccent = Color(0xFFff6b6b)   // Coral accent primary
+    val CoralAccentSecondary = Color(0xFFff8c42) // Coral accent secondary
     
-    // Background Colors - Dark Theme
-    val Background = Color(0xFF000000)    // Black background
-    val Surface = Color(0xFF121212)       // Dark surface
-    val SurfaceVariant = Color(0xFF1a1a1a) // Slightly lighter surface
+    // Primary Colors - Athletic Blue with Coral Accent
+    val Primary = CoralAccent            // Coral for primary actions
+    val PrimaryVariant = CoralAccentSecondary // Secondary coral
+    val OnPrimary = Color(0xFFffffff)    // White text on coral
     
-    // Neutral Colors (from wireframe)
-    val Neutral900 = Color(0xFF171717)    // neutral-900 - Cards
-    val Neutral800 = Color(0xFF262626)    // neutral-800 - Borders
-    val Neutral700 = Color(0xFF404040)    // neutral-700 - Dividers
-    val Neutral500 = Color(0xFF737373)    // neutral-500 - Secondary text
-    val Neutral400 = Color(0xFF9ca3af)    // neutral-400 - Placeholder text
-    val Neutral300 = Color(0xFFd1d5db)    // neutral-300 - Body text
+    // Background Colors - Athletic Blue Gradient Theme
+    val Background = DeepBlue             // Deep blue background
+    val Surface = Color(0xFF2d4a6b)       // Athletic blue surface
+    val SurfaceVariant = Color(0xFF3a5a7a) // Lighter athletic blue surface
+    val GradientStart = DeepBlue          // For gradient backgrounds
+    val GradientEnd = AthleteBlue         // For gradient backgrounds
+    
+    // Neutral Colors for Athletic Blue Theme
+    val Neutral900 = Color(0xFF1a2f47)    // Dark blue-tinted cards
+    val Neutral800 = Color(0xFF2a4661)    // Blue-tinted borders
+    val Neutral700 = Color(0xFF3a5a7a)    // Blue-tinted dividers
+    val Neutral500 = Color(0xFF6b8ba8)    // Blue-tinted secondary text
+    val Neutral400 = Color(0xFF8ba3bd)    // Blue-tinted placeholder text
+    val Neutral300 = Color(0xFFb8c9d9)    // Blue-tinted body text
     
     // Text Colors
     val OnBackground = Color(0xFFfafafa)  // Almost white text
@@ -33,12 +41,19 @@ object AppColors {
     val Error = Color(0xFFef4444)         // red-500
     val Info = Color(0xFF3b82f6)          // blue-500
     
-    // Card and Component Colors
-    val CardBackground = Neutral900       // Card backgrounds
-    val CardBorder = Neutral800           // Card borders
-    val Divider = Neutral700              // Dividers and separators
+    // Card and Component Colors - Athletic Theme
+    val CardBackground = Neutral900       // Athletic blue card backgrounds
+    val CardBorder = Neutral800           // Athletic blue card borders
+    val Divider = Neutral700              // Athletic blue dividers and separators
     
-    // Interactive Colors
-    val PrimaryHover = Color(0xFF65a30d)  // lime-600 for hover states
-    val SurfaceHover = Color(0xFF1f1f1f)  // Hover state for surfaces
+    // Interactive Colors - Athletic Theme
+    val PrimaryHover = CoralAccentSecondary // Coral hover states
+    val SurfaceHover = Color(0xFF3f5d7a)    // Athletic blue hover state
+    
+    // GPS Status Colors
+    val GPSExcellent = Color(0xFF22c55e)   // Green for excellent signal
+    val GPSGood = Color(0xFFf59e0b)        // Amber for good signal
+    val GPSFair = Color(0xFFf97316)        // Orange for fair signal
+    val GPSPoor = Error                    // Red for poor signal
+    val GPSInactive = Neutral500           // Gray for inactive
 }

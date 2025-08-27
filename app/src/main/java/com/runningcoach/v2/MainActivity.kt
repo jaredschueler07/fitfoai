@@ -24,7 +24,12 @@ import com.runningcoach.v2.presentation.screen.goal.SetEventGoalScreen
 import com.runningcoach.v2.presentation.screen.profile.PersonalizeProfileScreen
 import com.runningcoach.v2.presentation.screen.welcome.WelcomeScreen
 import com.runningcoach.v2.presentation.screen.runtracking.RunTrackingScreen
+import com.runningcoach.v2.presentation.screen.runtracking.RunTrackingViewModel
 import com.runningcoach.v2.presentation.screen.progress.ProgressScreen
+import com.runningcoach.v2.domain.usecase.StartRunSessionUseCase
+import com.runningcoach.v2.domain.usecase.TrackRunSessionUseCase
+import com.runningcoach.v2.domain.usecase.EndRunSessionUseCase
+import com.runningcoach.v2.data.repository.MockRunSessionRepository
 import com.runningcoach.v2.presentation.screen.apitesting.APITestingScreen
 import com.runningcoach.v2.presentation.theme.RunningCoachTheme
 import kotlinx.coroutines.CoroutineScope
@@ -214,7 +219,19 @@ fun RunningCoachApp() {
             
             // Run Tracking Screen
             composable(Screen.RunTracking.route) {
+                // Create temporary mock repository and use cases (since Hilt is disabled)
+                val repository = MockRunSessionRepository()
+                val startRunSessionUseCase = StartRunSessionUseCase(repository)
+                val trackRunSessionUseCase = TrackRunSessionUseCase(repository)
+                val endRunSessionUseCase = EndRunSessionUseCase(repository)
+                val viewModel = RunTrackingViewModel(
+                    startRunSessionUseCase,
+                    trackRunSessionUseCase,
+                    endRunSessionUseCase
+                )
+                
                 RunTrackingScreen(
+                    viewModel = viewModel,
                     onNavigateBack = {
                         navController.popBackStack()
                     }
