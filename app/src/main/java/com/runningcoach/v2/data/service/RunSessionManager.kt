@@ -16,7 +16,8 @@ import java.util.*
 class RunSessionManager(
     private val context: Context,
     private val locationService: LocationService,
-    private val database: FITFOAIDatabase
+    private val database: FITFOAIDatabase,
+    private val voiceCoachingManager: VoiceCoachingManager? = null
 ) {
     
     private val runSessionDao: RunSessionDao = database.runSessionDao()
@@ -35,11 +36,19 @@ class RunSessionManager(
     private var lastUpdateTime: Long = 0L
     private var currentUserId: Long = 1L // Default user ID
     
+    // Voice coaching settings
+    private var targetPace: String? = null
+    private var targetDistance: String? = null
+    
     fun setCurrentUser(userId: Long) {
         currentUserId = userId
     }
     
-    fun startRunSession(): Boolean {
+    fun startRunSession(
+        targetPace: String? = null,
+        targetDistance: String? = null,
+        enableVoiceCoaching: Boolean = true
+    ): Boolean {
         if (_isSessionActive.value) {
             return false
         }
@@ -50,6 +59,10 @@ class RunSessionManager(
         
         sessionStartTime = System.currentTimeMillis()
         lastUpdateTime = sessionStartTime
+        
+        // Set coaching parameters
+        this.targetPace = targetPace
+        this.targetDistance = targetDistance
         
         // Create new run session
         val newSession = RunSessionEntity(
@@ -73,6 +86,15 @@ class RunSessionManager(
         // Start metrics calculation
         startMetricsCalculation()
         
+        // Start voice coaching if enabled
+        if (enableVoiceCoaching) {
+            voiceCoachingManager?.startVoiceCoaching(
+                currentMetrics,
+                targetPace,
+                targetDistance
+            )
+        }
+        
         return true
     }
     
@@ -80,6 +102,7 @@ class RunSessionManager(
         if (!_isSessionActive.value) return
         
         locationService.stopLocationTracking()
+        voiceCoachingManager?.pauseVoiceCoaching()
         _isSessionActive.value = false
     }
     
@@ -87,6 +110,7 @@ class RunSessionManager(
         if (_isSessionActive.value) return
         
         locationService.startLocationTracking()
+        voiceCoachingManager?.resumeVoiceCoaching(currentMetrics)
         _isSessionActive.value = true
         startMetricsCalculation()
     }
@@ -100,6 +124,7 @@ class RunSessionManager(
         val duration = endTime - sessionStartTime
         
         locationService.stopLocationTracking()
+        voiceCoachingManager?.stopVoiceCoaching()
         _isSessionActive.value = false
         
         // Calculate final metrics
@@ -236,5 +261,22 @@ class RunSessionManager(
         _currentMetrics.value = RunMetrics()
         _isSessionActive.value = false
         locationService.clearLocationHistory()
+    }
+    
+    // Voice coaching controls
+    fun toggleVoiceCoaching(enabled: Boolean) {
+        voiceCoachingManager?.setVoiceCoachingEnabled(enabled)
+    }
+    
+    fun provideManualCoaching(scenario: FitnessCoachAgent.CoachingScenario) {
+        voiceCoachingManager?.provideManualCoaching(scenario)
+    }
+    
+    fun getVoiceCoachingStatus(): VoiceCoachingManager.CoachingStatus? {
+        return voiceCoachingManager?.getCurrentCoachingStatus()
+    }
+    
+    fun stopVoiceCoaching() {
+        voiceCoachingManager?.stopVoiceCoaching()
     }
 }

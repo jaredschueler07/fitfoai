@@ -32,6 +32,11 @@ fun RunTrackingScreen(
     var speed by remember { mutableStateOf("0.0") }
     var calories by remember { mutableStateOf("0") }
     
+    // Voice coaching state
+    var isVoiceCoachingEnabled by remember { mutableStateOf(true) }
+    var currentCoachingPhase by remember { mutableStateOf("Warmup") }
+    var isVoiceCoachingPlaying by remember { mutableStateOf(false) }
+    
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -147,6 +152,103 @@ fun RunTrackingScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.OnSurface
                 )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Voice Coaching Controls
+        AppCard(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "AI Voice Coach",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = AppColors.OnSurface,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = if (isVoiceCoachingEnabled) "Phase: $currentCoachingPhase" else "Disabled",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.Neutral400
+                        )
+                    }
+                    
+                    Switch(
+                        checked = isVoiceCoachingEnabled,
+                        onCheckedChange = { isVoiceCoachingEnabled = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = AppColors.Primary,
+                            checkedTrackColor = AppColors.Primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                
+                if (isVoiceCoachingEnabled) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Voice coaching status
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isVoiceCoachingPlaying) AppColors.Primary else AppColors.Neutral500
+                                )
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isVoiceCoachingPlaying) "Speaking..." else "Listening",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.OnSurface
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Manual coaching buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Button(
+                            onClick = { /* Provide motivation */ },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AppColors.Primary.copy(alpha = 0.1f),
+                                contentColor = AppColors.Primary
+                            )
+                        ) {
+                            Text("Motivate", style = MaterialTheme.typography.labelSmall)
+                        }
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        Button(
+                            onClick = { /* Provide form tips */ },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AppColors.Primary.copy(alpha = 0.1f),
+                                contentColor = AppColors.Primary
+                            )
+                        ) {
+                            Text("Form Tips", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
             }
         }
         

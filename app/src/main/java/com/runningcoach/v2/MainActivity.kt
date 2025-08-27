@@ -22,6 +22,7 @@ import com.runningcoach.v2.presentation.screen.goal.SetEventGoalScreen
 import com.runningcoach.v2.presentation.screen.profile.PersonalizeProfileScreen
 import com.runningcoach.v2.presentation.screen.welcome.WelcomeScreen
 import com.runningcoach.v2.presentation.screen.runtracking.RunTrackingScreen
+import com.runningcoach.v2.presentation.screen.progress.ProgressScreen
 import com.runningcoach.v2.presentation.theme.RunningCoachTheme
 // import dagger.hilt.android.AndroidEntryPoint
 
@@ -117,8 +118,7 @@ fun RunningCoachApp() {
             }
             
             composable(Screen.Progress.route) {
-                // Placeholder for now - will implement in Phase 3
-                DashboardScreen(userName = "Progress View Coming Soon")
+                ProgressScreen()
             }
             
             composable(Screen.Profile.route) {
