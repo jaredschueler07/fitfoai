@@ -110,4 +110,4 @@ ios/Pods/
 *.swo
 
 # OS generated files
-Thumbs.db
+Thumbs.db.agent_comm/
