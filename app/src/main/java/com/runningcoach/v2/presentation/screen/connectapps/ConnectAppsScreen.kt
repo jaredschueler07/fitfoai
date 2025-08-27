@@ -33,15 +33,20 @@ fun ConnectAppsScreen(
     
     // API Connection Manager
     val apiConnectionManager = remember { 
-        com.runningcoach.v2.data.service.APIConnectionManager(context)
+        try {
+            com.runningcoach.v2.data.service.APIConnectionManager(context)
+        } catch (e: Exception) {
+            android.util.Log.e("ConnectAppsScreen", "Error creating APIConnectionManager", e)
+            null
+        }
     }
     
     var connectedApps by remember { mutableStateOf(emptyList<ConnectedApp>()) }
     
     // Observe connection states
-    val googleFitConnected by apiConnectionManager.googleFitConnected.collectAsState()
-    val spotifyConnected by apiConnectionManager.spotifyConnected.collectAsState()
-    val connectionStatus by apiConnectionManager.connectionStatus.collectAsState()
+    val googleFitConnected by (apiConnectionManager?.googleFitConnected ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
+    val spotifyConnected by (apiConnectionManager?.spotifyConnected ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
+    val connectionStatus by (apiConnectionManager?.connectionStatus ?: kotlinx.coroutines.flow.MutableStateFlow("Error: Connection manager not initialized")).collectAsState()
     
     // Update connectedApps based on actual connection states
     LaunchedEffect(googleFitConnected, spotifyConnected) {
@@ -132,26 +137,43 @@ fun ConnectAppsScreen(
                     onToggleConnection = { toggleApp ->
                         when (toggleApp.id) {
                             "google_fit" -> {
-                                if (googleFitConnected) {
-                                    apiConnectionManager.disconnectGoogleFit()
-                                } else {
-                                    // Start Google Fit connection
-                                    val intent = apiConnectionManager.connectGoogleFit()
-                                    if (intent.action != null) {
-                                        context.startActivity(intent)
+                                apiConnectionManager?.let { manager ->
+                                    if (googleFitConnected) {
+                                        manager.disconnectGoogleFit()
                                     } else {
-                                        // If no intent is returned, user might already be connected
-                                        apiConnectionManager.testGoogleFitConnection()
+                                        try {
+                                            // Start Google Fit connection
+                                            val intent = manager.connectGoogleFit()
+                                            if (intent.action != null || intent.component != null) {
+                                                context.startActivity(intent)
+                                            } else {
+                                                // If no intent is returned, user might already be connected
+                                                manager.testGoogleFitConnection()
+                                            }
+                                        } catch (e: Exception) {
+                                            // Handle any errors during connection
+                                            android.util.Log.e("ConnectAppsScreen", "Error connecting to Google Fit", e)
+                                        }
                                     }
+                                } ?: run {
+                                    android.util.Log.e("ConnectAppsScreen", "APIConnectionManager is null")
                                 }
                             }
                             "spotify" -> {
-                                if (spotifyConnected) {
-                                    apiConnectionManager.disconnectSpotify()
-                                } else {
-                                    // Start OAuth flow
-                                    val intent = apiConnectionManager.connectSpotify()
-                                    context.startActivity(intent)
+                                apiConnectionManager?.let { manager ->
+                                    if (spotifyConnected) {
+                                        manager.disconnectSpotify()
+                                    } else {
+                                        try {
+                                            // Start OAuth flow
+                                            val intent = manager.connectSpotify()
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("ConnectAppsScreen", "Error connecting to Spotify", e)
+                                        }
+                                    }
+                                } ?: run {
+                                    android.util.Log.e("ConnectAppsScreen", "APIConnectionManager is null")
                                 }
                             }
                         }

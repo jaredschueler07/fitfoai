@@ -89,28 +89,61 @@ class GoogleFitService(private val context: Context) {
     }
     
     fun initiateConnection(): Intent {
-        _connectionStatus.value = "Connecting to Google Fit..."
-        
-        // Get the current signed-in account
-        val account = getCurrentAccount()
-        
-        if (account != null && hasPermissions(account)) {
-            // Already connected
-            _isConnected.value = true
-            _connectionStatus.value = "Connected to Google Fit"
-            return Intent() // Return empty intent since we're already connected
+        return try {
+            _connectionStatus.value = "Connecting to Google Fit..."
+            Log.i(TAG, "Initiating Google Fit connection")
+            
+            // Ensure GoogleSignInClient is initialized
+            if (googleSignInClient == null) {
+                Log.e(TAG, "GoogleSignInClient is null, reinitializing...")
+                setupGoogleFit()
+            }
+            
+            // Get the current signed-in account
+            val account = getCurrentAccount()
+            Log.i(TAG, "Current account: ${account?.email ?: "null"}")
+            
+            if (account != null && hasPermissions(account)) {
+                // Already connected
+                _isConnected.value = true
+                _connectionStatus.value = "Connected to Google Fit"
+                Log.i(TAG, "Already connected to Google Fit")
+                return Intent() // Return empty intent since we're already connected
+            }
+            
+            // Request permissions
+            val signInIntent = googleSignInClient?.signInIntent
+            if (signInIntent == null) {
+                Log.e(TAG, "SignIn intent is null")
+                _connectionStatus.value = "Error: Unable to create sign-in intent"
+                return Intent()
+            }
+            
+            Log.i(TAG, "Returning sign-in intent")
+            signInIntent
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initiating Google Fit connection", e)
+            _connectionStatus.value = "Error: ${e.message}"
+            _isConnected.value = false
+            Intent()
         }
-        
-        // Request permissions
-        return googleSignInClient?.signInIntent ?: Intent()
     }
     
     fun checkConnectionStatus() {
-        val account = getCurrentAccount()
-        val hasPermissions = account != null && hasPermissions(account)
-        
-        _isConnected.value = hasPermissions
-        _connectionStatus.value = if (hasPermissions) "Connected to Google Fit" else "Not connected"
+        try {
+            Log.i(TAG, "Checking Google Fit connection status")
+            val account = getCurrentAccount()
+            val hasPermissions = account != null && hasPermissions(account)
+            
+            _isConnected.value = hasPermissions
+            _connectionStatus.value = if (hasPermissions) "Connected to Google Fit" else "Not connected"
+            
+            Log.i(TAG, "Connection status: ${_connectionStatus.value}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking connection status", e)
+            _isConnected.value = false
+            _connectionStatus.value = "Error checking connection"
+        }
     }
     
     private fun getCurrentAccount(): GoogleSignInAccount? {
@@ -118,8 +151,13 @@ class GoogleFitService(private val context: Context) {
     }
     
     private fun hasPermissions(account: GoogleSignInAccount): Boolean {
-        val options = fitnessOptions ?: return false
-        return GoogleSignIn.hasPermissions(account, options)
+        return try {
+            val options = fitnessOptions ?: return false
+            GoogleSignIn.hasPermissions(account, options)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking permissions", e)
+            false
+        }
     }
     
     fun requestPermissions(activity: Activity) {

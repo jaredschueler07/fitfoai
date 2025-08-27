@@ -32,7 +32,13 @@ class GoogleFitRepository(
     }
     
     fun connectGoogleFit(): android.content.Intent {
-        return googleFitService.initiateConnection()
+        return try {
+            Log.i("GoogleFitRepository", "Initiating Google Fit connection")
+            googleFitService.initiateConnection()
+        } catch (e: Exception) {
+            Log.e("GoogleFitRepository", "Error in connectGoogleFit", e)
+            android.content.Intent()
+        }
     }
     
     suspend fun updateConnectionStatus(userId: Long, isConnected: Boolean) {

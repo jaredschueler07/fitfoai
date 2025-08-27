@@ -2,6 +2,7 @@ package com.runningcoach.v2.data.service
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.repository.GoogleFitRepository
 import io.ktor.client.*
@@ -41,8 +42,15 @@ class APIConnectionManager(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO)
     
     fun connectGoogleFit(): Intent {
-        _connectionStatus.value = "Connecting to Google Fit..."
-        return googleFitRepository.connectGoogleFit()
+        return try {
+            _connectionStatus.value = "Connecting to Google Fit..."
+            Log.i("APIConnectionManager", "Connecting to Google Fit via repository")
+            googleFitRepository.connectGoogleFit()
+        } catch (e: Exception) {
+            Log.e("APIConnectionManager", "Error connecting to Google Fit", e)
+            _connectionStatus.value = "Error: ${e.message}"
+            Intent()
+        }
     }
     
     fun connectSpotify(): Intent {
