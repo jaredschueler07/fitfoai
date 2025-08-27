@@ -2,6 +2,8 @@ package com.runningcoach.v2.presentation.screen.connectapps
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +29,41 @@ fun ConnectAppsScreen(
     onComplete: (List<ConnectedApp>) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
+    // API Connection Manager
+    val apiConnectionManager = remember { 
+        com.runningcoach.v2.data.service.APIConnectionManager(context)
+    }
+    
     var connectedApps by remember { mutableStateOf(emptyList<ConnectedApp>()) }
+    
+    // Observe connection states
+    val googleFitConnected by apiConnectionManager.googleFitConnected.collectAsState()
+    val spotifyConnected by apiConnectionManager.spotifyConnected.collectAsState()
+    val connectionStatus by apiConnectionManager.connectionStatus.collectAsState()
+    
+    // Update connectedApps based on actual connection states
+    LaunchedEffect(googleFitConnected, spotifyConnected) {
+        val apps = mutableListOf<ConnectedApp>()
+        if (googleFitConnected) {
+            apps.add(ConnectedApp(
+                id = "google_fit",
+                name = "Google Fit",
+                type = AppType.GOOGLE_FIT,
+                isConnected = true
+            ))
+        }
+        if (spotifyConnected) {
+            apps.add(ConnectedApp(
+                id = "spotify",
+                name = "Spotify",
+                type = AppType.SPOTIFY,
+                isConnected = true
+            ))
+        }
+        connectedApps = apps
+    }
     
     val availableApps = listOf(
         ConnectedApp(
@@ -64,6 +100,22 @@ fun ConnectAppsScreen(
             modifier = Modifier.padding(bottom = 32.dp)
         )
         
+        // Connection status message
+        connectionStatus?.let { status ->
+            AppCard(
+                modifier = Modifier.fillMaxWidth(),
+                backgroundColor = AppColors.Primary.copy(alpha = 0.1f)
+            ) {
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.Primary,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        
         // Apps list
         LazyColumn(
             modifier = Modifier.weight(1f),
@@ -72,12 +124,36 @@ fun ConnectAppsScreen(
             items(availableApps) { app ->
                 AppConnectionCard(
                     app = app,
-                    isConnected = connectedApps.any { it.id == app.id },
+                    isConnected = when (app.id) {
+                        "google_fit" -> googleFitConnected
+                        "spotify" -> spotifyConnected
+                        else -> false
+                    },
                     onToggleConnection = { toggleApp ->
-                        connectedApps = if (connectedApps.any { it.id == toggleApp.id }) {
-                            connectedApps.filter { it.id != toggleApp.id }
-                        } else {
-                            connectedApps + toggleApp.copy(isConnected = true)
+                        when (toggleApp.id) {
+                            "google_fit" -> {
+                                if (googleFitConnected) {
+                                    apiConnectionManager.disconnectGoogleFit()
+                                } else {
+                                    // Start Google Fit connection
+                                    val intent = apiConnectionManager.connectGoogleFit()
+                                    if (intent.action != null) {
+                                        context.startActivity(intent)
+                                    } else {
+                                        // If no intent is returned, user might already be connected
+                                        apiConnectionManager.testGoogleFitConnection()
+                                    }
+                                }
+                            }
+                            "spotify" -> {
+                                if (spotifyConnected) {
+                                    apiConnectionManager.disconnectSpotify()
+                                } else {
+                                    // Start OAuth flow
+                                    val intent = apiConnectionManager.connectSpotify()
+                                    context.startActivity(intent)
+                                }
+                            }
                         }
                     }
                 )

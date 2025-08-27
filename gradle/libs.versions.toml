@@ -31,6 +31,14 @@ coroutines = "1.8.0"
 kotlinxSerialization = "1.6.2"
 gson = "2.10.1"
 
+# Google APIs
+geminiAi = "0.7.0"
+googleMaps = "18.2.0"
+playServicesAuth = "21.0.0"
+playServicesFitness = "21.1.0"
+playServicesLocation = "21.0.1"
+playServicesAuthApiPhone = "18.0.1"
+
 [libraries]
 # Core Android
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -76,6 +84,14 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 # Serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+
+# Google APIs
+google-ai-client = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "geminiAi" }
+google-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "googleMaps" }
+google-play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
+google-play-services-fitness = { group = "com.google.android.gms", name = "play-services-fitness", version.ref = "playServicesFitness" }
+google-play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+google-play-services-auth-api-phone = { group = "com.google.android.gms", name = "play-services-auth-api-phone", version.ref = "playServicesAuthApiPhone" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

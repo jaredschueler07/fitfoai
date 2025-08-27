@@ -1,5 +1,7 @@
 package com.runningcoach.v2
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,19 +25,103 @@ import com.runningcoach.v2.presentation.screen.profile.PersonalizeProfileScreen
 import com.runningcoach.v2.presentation.screen.welcome.WelcomeScreen
 import com.runningcoach.v2.presentation.screen.runtracking.RunTrackingScreen
 import com.runningcoach.v2.presentation.screen.progress.ProgressScreen
+import com.runningcoach.v2.presentation.screen.apitesting.APITestingScreen
 import com.runningcoach.v2.presentation.theme.RunningCoachTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 // import dagger.hilt.android.AndroidEntryPoint
 
 // @AndroidEntryPoint - Temporarily disabled
 class MainActivity : ComponentActivity() {
+    
+    private var apiConnectionManager: com.runningcoach.v2.data.service.APIConnectionManager? = null
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        // Initialize API connection manager
+        apiConnectionManager = com.runningcoach.v2.data.service.APIConnectionManager(this)
+        
+        // Handle OAuth callback if this activity was launched by a deep link
+        handleOAuthCallback(intent)
+        
         setContent {
             RunningCoachTheme {
                 RunningCoachApp()
             }
         }
+    }
+    
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOAuthCallback(intent)
+    }
+    
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        
+        // Handle Google Fit permissions result
+        if (requestCode == com.runningcoach.v2.data.service.GoogleFitService.GOOGLE_FIT_PERMISSIONS_REQUEST_CODE) {
+            apiConnectionManager?.handleGoogleFitActivityResult(requestCode, resultCode, data)
+        }
+    }
+    
+    private fun handleOAuthCallback(intent: Intent?) {
+        val data: Uri? = intent?.data
+        data?.let { uri ->
+            when (uri.host) {
+                "spotify-callback" -> {
+                    val authCode = uri.getQueryParameter("code")
+                    val error = uri.getQueryParameter("error")
+                    
+                    if (authCode != null) {
+                        // Handle successful Spotify OAuth
+                        CoroutineScope(Dispatchers.Main).launch {
+                            try {
+                                val result = apiConnectionManager?.handleSpotifyCallback(authCode)
+                                if (result?.isSuccess == true) {
+                                    println("Spotify OAuth successful: ${result.getOrNull()}")
+                                } else {
+                                    println("Spotify OAuth failed: ${result?.exceptionOrNull()?.message}")
+                                }
+                            } catch (e: Exception) {
+                                println("Spotify OAuth exception: ${e.message}")
+                            }
+                        }
+                    } else if (error != null) {
+                        // Handle OAuth error
+                        println("Spotify OAuth error: $error")
+                    }
+                }
+                "googlefit-callback" -> {
+                    val authCode = uri.getQueryParameter("code")
+                    val error = uri.getQueryParameter("error")
+                    
+                    if (authCode != null) {
+                        // Handle successful Google Fit OAuth
+                        CoroutineScope(Dispatchers.Main).launch {
+                            try {
+                                // Handle Google Fit OAuth - this is now handled by activity result
+                                println("Google Fit OAuth callback received")
+                            } catch (e: Exception) {
+                                println("Google Fit OAuth exception: ${e.message}")
+                            }
+                        }
+                    } else if (error != null) {
+                        // Handle OAuth error
+                        println("Google Fit OAuth error: $error")
+                    }
+                }
+            }
+        }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        apiConnectionManager?.close()
     }
 }
 
@@ -106,7 +192,7 @@ fun RunningCoachApp() {
             // Main App Screens (with bottom navigation)
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
-                    userName = "Jane", // In real app, get from user data
+                    userName = "Runner", // TODO: Get from user profile data
                     onStartRun = {
                         navController.navigate(Screen.RunTracking.route)
                     }
@@ -122,8 +208,8 @@ fun RunningCoachApp() {
             }
             
             composable(Screen.Profile.route) {
-                // Placeholder for now - will implement in Phase 3
-                DashboardScreen(userName = "Profile Settings Coming Soon")
+                // Temporary: Show API Testing screen in Profile tab for debugging
+                APITestingScreen()
             }
             
             // Run Tracking Screen
@@ -133,6 +219,11 @@ fun RunningCoachApp() {
                         navController.popBackStack()
                     }
                 )
+            }
+            
+            // API Testing Screen (for debugging)
+            composable(Screen.APITesting.route) {
+                APITestingScreen()
             }
         }
     }

@@ -8,26 +8,40 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.runningcoach.v2.data.local.FITFOAIDatabase
+import com.runningcoach.v2.data.repository.UserRepository
 import com.runningcoach.v2.domain.model.FitnessLevel
 import com.runningcoach.v2.domain.model.RunningGoal
 import com.runningcoach.v2.presentation.components.AppCard
 import com.runningcoach.v2.presentation.components.PrimaryButton
 import com.runningcoach.v2.presentation.theme.AppColors
+import kotlinx.coroutines.launch
 
 @Composable
 fun PersonalizeProfileScreen(
     onComplete: (ProfileData) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    // Repository setup
+    val database = remember { FITFOAIDatabase.getDatabase(context) }
+    val userRepository = remember { UserRepository(database) }
+    
     var name by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
     var selectedFitnessLevel by remember { mutableStateOf(FitnessLevel.BEGINNER) }
     var selectedRunningGoals by remember { mutableStateOf(setOf<RunningGoal>()) }
+    
+    var isSaving by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val scrollState = rememberScrollState()
     
@@ -225,12 +239,30 @@ fun PersonalizeProfileScreen(
             }
         }
 
+        // Error message
+        errorMessage?.let { error ->
+            AppCard(
+                modifier = Modifier.padding(bottom = 16.dp),
+                backgroundColor = MaterialTheme.colorScheme.errorContainer
+            ) {
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+        
         // Continue Button
         PrimaryButton(
-            text = "Continue",
+            text = if (isSaving) "Saving..." else "Continue",
             onClick = {
-                onComplete(
-                    ProfileData(
+                scope.launch {
+                    isSaving = true
+                    errorMessage = null
+                    
+                    val profileData = ProfileData(
                         name = name,
                         age = age.toIntOrNull() ?: 0,
                         height = height,
@@ -238,9 +270,22 @@ fun PersonalizeProfileScreen(
                         fitnessLevel = selectedFitnessLevel,
                         runningGoals = selectedRunningGoals.toList()
                     )
-                )
+                    
+                    // Save profile to database
+                    val saveResult = userRepository.saveUserProfile(profileData)
+                    
+                    if (saveResult.isSuccess) {
+                        // Profile saved successfully, proceed to next screen
+                        onComplete(profileData)
+                    } else {
+                        // Show error message
+                        errorMessage = "Failed to save profile: ${saveResult.exceptionOrNull()?.message}"
+                    }
+                    
+                    isSaving = false
+                }
             },
-            enabled = isFormValid
+            enabled = isFormValid && !isSaving
         )
     }
 }

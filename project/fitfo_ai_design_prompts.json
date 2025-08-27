@@ -1,0 +1,307 @@
+[
+  {
+    "design_element":"app_icon",
+    "size":"512x512",
+    "prompt":"Flat minimal icon of a runner silhouette with a bold Chicago star in orange, deep blue background, no outlines, no gradients, marathon poster aesthetic."
+  },
+  {
+    "design_element":"app_logo",
+    "size":"scalable",
+    "prompt":"Clean bold sans-serif text \u2018FITFO AI\u2019 in flat Chicago marathon poster style, blue base with orange highlight, rounded typography, minimal and modern."
+  },
+  {
+    "design_element":"app_symbol",
+    "size":"scalable",
+    "prompt":"Simplified Chicago star merged with a running shoe mark, flat minimal design, deep blue with orange highlight, bold silhouette."
+  },
+  {
+    "design_element":"splash_screen_logo",
+    "size":"scalable",
+    "prompt":"Large flat logo of a runner silhouette with Chicago skyline behind, bold shapes, deep blues and orange highlights, minimal marathon poster vibe."
+  },
+  {
+    "design_element":"home_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled house icon, deep blue, bold geometric shape, no outlines, Material 3 style."
+  },
+  {
+    "design_element":"ai_coach_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal icon of a rounded chat bubble with a subtle robot outline inside, deep blue base with orange accent, filled style."
+  },
+  {
+    "design_element":"progress_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled medal icon with ribbon, bold simple shapes, deep blue and orange, marathon award style."
+  },
+  {
+    "design_element":"profile_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled human silhouette icon, no detail, rounded friendly shape, deep blue."
+  },
+  {
+    "design_element":"settings_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled cogwheel icon with thick spokes, bold geometric shape, deep blue, no gradients."
+  },
+  {
+    "design_element":"back_arrow",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled left-pointing chevron arrow, bold simple shape, deep blue."
+  },
+  {
+    "design_element":"forward_arrow",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled right-pointing chevron arrow, bold simple shape, deep blue."
+  },
+  {
+    "design_element":"running_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal silhouette of a runner mid-stride, bold simple shape, deep blue with orange highlight, marathon poster style."
+  },
+  {
+    "design_element":"gps_location_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled location pin icon, deep blue with orange accent, bold geometric design."
+  },
+  {
+    "design_element":"timer_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled stopwatch icon, bold circle with top knob, deep blue base with orange detail."
+  },
+  {
+    "design_element":"distance_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled straight road icon, bold simple geometric path, deep blue with orange accent."
+  },
+  {
+    "design_element":"speed_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled lightning bolt icon, sharp bold shape, deep blue with orange highlight."
+  },
+  {
+    "design_element":"calories_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled flame icon, bold geometric flame shape, deep blue with orange highlight."
+  },
+  {
+    "design_element":"heart_rate_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled heart icon with a clean pulse line through center, deep blue with orange accent."
+  },
+  {
+    "design_element":"pace_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled two bold footprints icon, deep blue with orange accents, simple and geometric."
+  },
+  {
+    "design_element":"elevation_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled mountain peak icon, triangular bold shape, deep blue with orange accent."
+  },
+  {
+    "design_element":"spotify_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal simplified Spotify logo, circular, deep blue base with orange accent, bold poster style."
+  },
+  {
+    "design_element":"google_fit_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled heart with cross inside, deep blue with orange highlight, bold simple shape."
+  },
+  {
+    "design_element":"play_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled play triangle icon, deep blue with orange accent, bold simple shape."
+  },
+  {
+    "design_element":"pause_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled pause icon, two vertical bars, deep blue with orange accent."
+  },
+  {
+    "design_element":"stop_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled square icon, bold shape, deep blue with orange accent."
+  },
+  {
+    "design_element":"audio_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled single musical note icon, bold shape, deep blue with orange accent."
+  },
+  {
+    "design_element":"microphone_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled rounded microphone silhouette, deep blue with orange accent, bold simple style."
+  },
+  {
+    "design_element":"ai_brain_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal brain icon with a single spark\/star inside, deep blue with orange highlight, bold geometric style."
+  },
+  {
+    "design_element":"voice_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal voice icon with radiating wave lines, bold filled shapes, deep blue with orange accent."
+  },
+  {
+    "design_element":"chat_bubble_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal rounded filled chat bubble icon, bold simple shape, deep blue."
+  },
+  {
+    "design_element":"whistle_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled whistle icon, bold simple shape, deep blue with orange accent."
+  },
+  {
+    "design_element":"goal_target_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled bullseye icon, two concentric circles with center dot, bold geometric style, deep blue with orange accent."
+  },
+  {
+    "design_element":"achievement_badge_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal medal with ribbon icon, bold simple shapes, deep blue with orange accent."
+  },
+  {
+    "design_element":"lightning_bolt_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal sharp lightning bolt icon, bold simple silhouette, deep blue with orange accent."
+  },
+  {
+    "design_element":"chart_line_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal upward sloping line chart icon, bold filled line, deep blue with orange accent."
+  },
+  {
+    "design_element":"chart_bar_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal bar chart icon with three vertical bars, bold filled style, deep blue with orange accent."
+  },
+  {
+    "design_element":"pie_chart_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal pie chart icon, one slice highlighted in orange, bold filled style, deep blue."
+  },
+  {
+    "design_element":"trend_up_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal bold arrow pointing up, simple filled style, deep blue with orange accent."
+  },
+  {
+    "design_element":"calendar_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled calendar icon, bold square with grid lines, deep blue with orange accent."
+  },
+  {
+    "design_element":"history_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled clock icon with counterclockwise arrow around it, bold geometric shape, deep blue with orange accent."
+  },
+  {
+    "design_element":"welcome_hero",
+    "size":"scalable",
+    "prompt":"Flat minimal illustration of a runner silhouette with Chicago skyline behind, bold deep blues and orange accents, marathon poster style."
+  },
+  {
+    "design_element":"onboarding_device",
+    "size":"scalable",
+    "prompt":"Flat minimal illustration of a smartphone connected with a smartwatch, bold geometric style, deep blue with orange highlights."
+  },
+  {
+    "design_element":"onboarding_profile",
+    "size":"scalable",
+    "prompt":"Flat minimal illustration of a human silhouette with a form interface, deep blue base with orange highlight, marathon poster style."
+  },
+  {
+    "design_element":"onboarding_goal",
+    "size":"scalable",
+    "prompt":"Flat minimal illustration of a runner silhouette aiming at a bullseye target, bold shapes, deep blue and orange."
+  },
+  {
+    "design_element":"empty_state",
+    "size":"scalable",
+    "prompt":"Flat minimal outline of a friendly runner with text \u2018no data\u2019, deep blue with orange highlight, poster style."
+  },
+  {
+    "design_element":"error_state",
+    "size":"scalable",
+    "prompt":"Flat minimal illustration of a broken road with a runner silhouette, bold shapes, deep blue with orange highlight."
+  },
+  {
+    "design_element":"coach_avatar",
+    "size":"scalable",
+    "prompt":"Flat circular portrait of a coach, bold flat color fills, minimal detail, deep blue with orange highlight."
+  },
+  {
+    "design_element":"ai_coach_avatar",
+    "size":"scalable",
+    "prompt":"Flat circular icon of a friendly robot head, bold flat shapes, deep blue with orange accent."
+  },
+  {
+    "design_element":"race_5k",
+    "size":"scalable",
+    "prompt":"Flat minimal icon with bold text \u20185K\u2019 inside a running shoe motif, deep blue with orange highlight."
+  },
+  {
+    "design_element":"race_10k",
+    "size":"scalable",
+    "prompt":"Flat minimal icon with bold text \u201810K\u2019 inside a running shoe motif, deep blue with orange highlight."
+  },
+  {
+    "design_element":"race_21k",
+    "size":"scalable",
+    "prompt":"Flat minimal icon with bold text \u201821K\u2019 inside a running shoe motif, deep blue with orange highlight."
+  },
+  {
+    "design_element":"race_42k",
+    "size":"scalable",
+    "prompt":"Flat minimal icon with bold text \u201842K\u2019 inside a running shoe motif, deep blue with orange highlight."
+  },
+  {
+    "design_element":"custom_race_icon",
+    "size":"scalable",
+    "prompt":"Flat minimal filled finish flag icon, bold simple shape, deep blue with orange highlight."
+  },
+  {
+    "design_element":"success_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled green checkmark icon, bold geometric style, flat marathon poster aesthetic."
+  },
+  {
+    "design_element":"error_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled red X icon, bold simple shape."
+  },
+  {
+    "design_element":"warning_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled yellow triangle with exclamation point inside, bold geometric style."
+  },
+  {
+    "design_element":"info_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled blue circle with \u2018i\u2019 inside, bold simple shape."
+  },
+  {
+    "design_element":"loading_icon",
+    "size":"24x24dp",
+    "prompt":"Flat minimal filled rotating dots icon, simple bold circle shapes, deep blue with orange accent."
+  },
+  {
+    "design_element":"background_primary",
+    "size":"scalable",
+    "prompt":"Flat minimal background with deep blue gradient and Chicago skyline silhouette, bold marathon poster style with orange highlight."
+  },
+  {
+    "design_element":"background_secondary",
+    "size":"scalable",
+    "prompt":"Flat minimal background with bold geometric waves in deep blues, orange highlight, poster aesthetic."
+  },
+  {
+    "design_element":"shadow_effects",
+    "size":"scalable",
+    "prompt":"Flat minimal design with only 1\u20132 levels of subtle shadows, Material 3 style, deep blue base."
+  }
+]

@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.runningcoach.v2.domain.model.SampleCoaches
@@ -26,6 +27,37 @@ fun DashboardScreen(
     onStartRun: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val database = remember { com.runningcoach.v2.data.local.FITFOAIDatabase.getDatabase(context) }
+    val googleFitRepository = remember { com.runningcoach.v2.data.repository.GoogleFitRepository(context, database) }
+    
+    var fitnessData by remember { mutableStateOf<com.runningcoach.v2.data.local.entity.GoogleFitDailySummaryEntity?>(null) }
+    var isLoadingFitnessData by remember { mutableStateOf(false) }
+    
+    // Load fitness data when component is created
+    LaunchedEffect(Unit) {
+        if (googleFitRepository.isGoogleFitConnected()) {
+            isLoadingFitnessData = true
+            try {
+                // Try to get cached data first
+                val cachedData = googleFitRepository.getTodaysFitnessData()
+                if (cachedData != null) {
+                    fitnessData = cachedData
+                }
+                
+                // Sync fresh data from Google Fit
+                val syncResult = googleFitRepository.syncTodaysFitnessData()
+                if (syncResult.isSuccess) {
+                    fitnessData = syncResult.getOrNull()
+                }
+            } catch (e: Exception) {
+                // Handle error silently for now
+            } finally {
+                isLoadingFitnessData = false
+            }
+        }
+    }
+    
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -175,6 +207,145 @@ fun DashboardScreen(
                                     color = AppColors.Neutral400
                                 )
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Google Fit Data Section
+        if (fitnessData != null) {
+            item {
+                Column {
+                    Text(
+                        text = "Today's Fitness Data",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.OnSurface,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    
+                    AppCard {
+                        if (isLoadingFitnessData) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = AppColors.Primary,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        } else if (fitnessData != null) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                // Steps
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Steps",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = AppColors.OnSurface
+                                    )
+                                    Text(
+                                        text = "${fitnessData!!.steps ?: 0}",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.Primary
+                                    )
+                                }
+                                
+                                // Distance
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Distance",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = AppColors.OnSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", (fitnessData!!.distance ?: 0f) / 1000)} km",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.Primary
+                                    )
+                                }
+                                
+                                // Calories
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Calories",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = AppColors.OnSurface
+                                    )
+                                    Text(
+                                        text = "${fitnessData!!.calories ?: 0}",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.Primary
+                                    )
+                                }
+                                
+                                // Heart Rate (if available)
+                                fitnessData!!.averageHeartRate?.let { heartRate ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Heart Rate",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = AppColors.OnSurface
+                                        )
+                                        Text(
+                                            text = "${String.format("%.0f", heartRate)} BPM",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.Primary
+                                        )
+                                    }
+                                }
+                                
+                                // Weight (if available)
+                                fitnessData!!.weight?.let { weight ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Weight",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = AppColors.OnSurface
+                                        )
+                                        Text(
+                                            text = "${String.format("%.1f", weight)} kg",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.Primary
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = "No fitness data available",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = AppColors.Neutral400,
+                                modifier = Modifier.padding(16.dp)
+                            )
                         }
                     }
                 }

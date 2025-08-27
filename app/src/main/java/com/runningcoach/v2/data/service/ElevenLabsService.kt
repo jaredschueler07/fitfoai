@@ -239,6 +239,29 @@ class ElevenLabsService(
         }
     }
     
+    suspend fun testConnection(): Result<String> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            if (apiKey.isBlank()) {
+                Result.failure(Exception("API key not configured"))
+            } else {
+                // Test with a simple API call to get voice list
+                val response: HttpResponse = httpClient.get("https://api.elevenlabs.io/v1/voices") {
+                    headers {
+                        append("xi-api-key", apiKey)
+                    }
+                }
+                
+                if (response.status.isSuccess()) {
+                    Result.success("Connection successful - API key valid")
+                } else {
+                    Result.failure(Exception("API call failed with status: ${response.status}"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     enum class CoachingUrgency {
         CALM,       // Gentle encouragement
         NORMAL,     // Standard coaching

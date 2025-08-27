@@ -168,6 +168,44 @@ class GeminiService(private val httpClient: HttpClient) {
         }
     }
     
+    suspend fun testConnection(): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            if (apiKey.isBlank()) {
+                return@withContext Result.failure(Exception("API key not configured"))
+            }
+            
+            val request = GeminiRequest(
+                contents = listOf(
+                    Content(
+                        parts = listOf(
+                            Part(text = "Hello, please respond with 'Connection successful' to test the API.")
+                        )
+                    )
+                )
+            )
+            
+            val response: HttpResponse = httpClient.post("$baseUrl/models/gemini-pro:generateContent") {
+                url {
+                    parameters.append("key", apiKey)
+                }
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            
+            if (response.status.isSuccess()) {
+                val geminiResponse: GeminiResponse = json.decodeFromString(response.body())
+                val responseText = geminiResponse.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                    ?: "No response received"
+                
+                Result.success("Connection successful: $responseText")
+            } else {
+                Result.failure(Exception("API call failed with status: ${response.status}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     private fun buildFitnessCoachPrompt(context: UserFitnessContext): String {
         return """
             You are an expert PhD-level fitness coach and running specialist with years of experience helping athletes achieve their goals. You provide personalized, science-based advice that is encouraging, practical, and safe.

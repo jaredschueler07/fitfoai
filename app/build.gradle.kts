@@ -109,6 +109,14 @@ dependencies {
     // Serialization
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.gson)
+    
+    // Google APIs
+    implementation(libs.google.ai.client)
+    implementation(libs.google.maps)
+    implementation(libs.google.play.services.auth)
+    implementation(libs.google.play.services.fitness)
+    implementation(libs.google.play.services.location)
+    implementation(libs.google.play.services.auth.api.phone)
 
     // Testing
     testImplementation(libs.junit)

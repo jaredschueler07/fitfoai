@@ -14,9 +14,11 @@ import com.runningcoach.v2.data.local.converter.Converters
         UserEntity::class,
         RunSessionEntity::class,
         TrainingPlanEntity::class,
-        AIConversationEntity::class
+        AIConversationEntity::class,
+        GoogleFitDailySummaryEntity::class,
+        ConnectedAppEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -26,6 +28,8 @@ abstract class FITFOAIDatabase : RoomDatabase() {
     abstract fun runSessionDao(): RunSessionDao
     abstract fun trainingPlanDao(): TrainingPlanDao
     abstract fun aiConversationDao(): AIConversationDao
+    abstract fun googleFitDailySummaryDao(): GoogleFitDailySummaryDao
+    abstract fun connectedAppDao(): ConnectedAppDao
     
     companion object {
         @Volatile

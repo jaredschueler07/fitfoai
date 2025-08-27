@@ -11,6 +11,7 @@ sealed class Screen(val route: String) {
     object Progress : Screen("progress")
     object Profile : Screen("profile")
     object RunTracking : Screen("run_tracking")
+    object APITesting : Screen("api_testing")
     
     // Bottom navigation items
     companion object {
