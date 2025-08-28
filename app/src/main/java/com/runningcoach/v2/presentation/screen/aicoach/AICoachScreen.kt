@@ -293,7 +293,7 @@ private fun generateAIResponse(userMessage: String): String {
     val responses = mapOf(
         "training" to "Based on your current fitness level and running history, I recommend focusing on building your aerobic base with easy runs at 70-80% of your weekly volume. Your recent data shows good consistency, so we can start incorporating one tempo run per week.",
         
-        "nutrition" to "For optimal running performance, aim for 3-4g of carbohydrates per kg of body weight on training days. Based on your workout intensity data, you'll want to fuel 2-3 hours before longer runs with easily digestible carbs.",
+        "nutrition" to "For optimal running performance, aim for 1.4-1.8g of carbohydrates per lb of body weight on training days. Based on your workout intensity data, you'll want to fuel 2-3 hours before longer runs with easily digestible carbs.",
         
         "recovery" to "Your recent training load suggests you need 1-2 full rest days per week. I notice your sleep data shows some inconsistency - aim for 7-9 hours nightly for optimal recovery. Consider active recovery like gentle yoga on rest days.",
         

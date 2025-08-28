@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "7f060c3bcdce4130273a780bcd22faa8",
+    "identityHash": "e1a0a73cb3332b40d648be14f53f56fb",
     "entities": [
       {
         "tableName": "users",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `age` INTEGER NOT NULL, `height` INTEGER NOT NULL, `weight` REAL NOT NULL, `experienceLevel` TEXT NOT NULL, `runningGoals` TEXT NOT NULL, `selectedCoach` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `age` INTEGER NOT NULL, `height` INTEGER NOT NULL, `weight` REAL NOT NULL, `experienceLevel` TEXT NOT NULL, `runningGoals` TEXT NOT NULL, `selectedCoach` TEXT NOT NULL, `onboardingCompleted` INTEGER NOT NULL, `profileCompleted` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -54,6 +54,18 @@
             "fieldPath": "selectedCoach",
             "columnName": "selectedCoach",
             "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "onboardingCompleted",
+            "columnName": "onboardingCompleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "profileCompleted",
+            "columnName": "profileCompleted",
+            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -902,7 +914,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7f060c3bcdce4130273a780bcd22faa8')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e1a0a73cb3332b40d648be14f53f56fb')"
     ]
   }
 }

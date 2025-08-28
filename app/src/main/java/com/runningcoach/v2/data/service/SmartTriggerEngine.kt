@@ -288,4 +288,36 @@ class SmartTriggerEngine {
         val zone4Max: Int,
         val zone5Max: Int
     )
+    
+    // Additional methods needed by VoiceCoachingManager
+    fun resetTriggerState() {
+        lastPaceWarning = 0L
+        lastMotivationalMessage = 0L
+        lastMilestoneAnnouncement = 0L
+        triggeredMilestones.clear()
+        previousPaceZone = PaceZone.UNKNOWN
+        paceZoneStableCount = 0
+        paceHistory.clear()
+        heartRateHistory.clear()
+    }
+    
+    suspend fun processRunMetrics(metrics: RunMetrics, 
+                                  targetPace: String? = null,
+                                  targetDistance: Float? = null): List<CoachingTrigger> {
+        return analyzeMetricsForTriggers(metrics, targetPace, targetDistance)
+    }
+    
+    fun getTriggerStats(): TriggerStats {
+        return TriggerStats(
+            paceWarnings = if (lastPaceWarning > 0) 1 else 0,
+            motivationalMessages = if (lastMotivationalMessage > 0) 1 else 0,
+            milestoneAnnouncements = triggeredMilestones.size
+        )
+    }
+    
+    data class TriggerStats(
+        val paceWarnings: Int,
+        val motivationalMessages: Int,
+        val milestoneAnnouncements: Int
+    )
 }

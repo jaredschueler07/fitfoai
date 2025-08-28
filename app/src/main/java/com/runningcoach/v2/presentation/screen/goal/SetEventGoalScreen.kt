@@ -10,8 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.util.Log
+import com.runningcoach.v2.data.local.FITFOAIDatabase
+import com.runningcoach.v2.data.repository.UserRepository
+import kotlinx.coroutines.launch
 import com.runningcoach.v2.domain.model.PopularRaces
 import com.runningcoach.v2.domain.model.RaceGoal
 import com.runningcoach.v2.presentation.components.AppCard
@@ -25,8 +30,41 @@ fun SetEventGoalScreen(
     onComplete: (RaceGoal?) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    // Repository setup for marking onboarding complete
+    val database = remember { FITFOAIDatabase.getDatabase(context) }
+    val userRepository = remember { UserRepository(database) }
+    
     var selectedRace by remember { mutableStateOf<RaceGoal?>(null) }
     var showCustomRaceDialog by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    
+    // Function to complete onboarding and navigate
+    fun completeOnboardingAndNavigate(raceGoal: RaceGoal?) {
+        scope.launch {
+            isSaving = true
+            try {
+                // Mark onboarding as completed
+                val result = userRepository.markOnboardingCompleted()
+                if (result.isSuccess) {
+                    Log.i("SetEventGoal", "Onboarding marked as completed")
+                    onComplete(raceGoal)
+                } else {
+                    Log.e("SetEventGoal", "Failed to mark onboarding complete: ${result.exceptionOrNull()?.message}")
+                    // Still proceed to avoid blocking user
+                    onComplete(raceGoal)
+                }
+            } catch (e: Exception) {
+                Log.e("SetEventGoal", "Error completing onboarding", e)
+                // Still proceed to avoid blocking user
+                onComplete(raceGoal)
+            } finally {
+                isSaving = false
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -110,16 +148,18 @@ fun SetEventGoalScreen(
         Column {
             if (selectedRace != null) {
                 PrimaryButton(
-                    text = "Continue with ${selectedRace!!.name}",
-                    onClick = { onComplete(selectedRace) }
+                    text = if (isSaving) "Completing Setup..." else "Continue with ${selectedRace!!.name}",
+                    onClick = { completeOnboardingAndNavigate(selectedRace) },
+                    enabled = !isSaving
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
             }
             
             SecondaryButton(
-                text = "Skip - Set General Fitness Goals",
-                onClick = { onComplete(null) }
+                text = if (isSaving) "Completing Setup..." else "Skip - Set General Fitness Goals",
+                onClick = { completeOnboardingAndNavigate(null) },
+                enabled = !isSaving
             )
         }
     }

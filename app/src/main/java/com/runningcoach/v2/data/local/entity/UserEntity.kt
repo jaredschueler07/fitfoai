@@ -14,6 +14,8 @@ data class UserEntity(
     val experienceLevel: String, // BEGINNER, INTERMEDIATE, ADVANCED
     val runningGoals: List<String>, // stored as JSON
     val selectedCoach: String,
+    val onboardingCompleted: Boolean = false, // Track if full onboarding is complete
+    val profileCompleted: Boolean = false, // Track if profile section is complete
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

@@ -273,7 +273,7 @@ fun DashboardScreen(
                                         color = AppColors.OnSurface
                                     )
                                     Text(
-                                        text = "${String.format("%.1f", (fitnessData!!.distance ?: 0f) / 1000)} km",
+                                        text = "${String.format("%.1f", (fitnessData!!.distance ?: 0f) * 0.000621371f)} mi",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = AppColors.Primary
@@ -333,7 +333,7 @@ fun DashboardScreen(
                                             color = AppColors.OnSurface
                                         )
                                         Text(
-                                            text = "${String.format("%.1f", weight)} kg",
+                                            text = "${String.format("%.1f", weight * 2.20462f)} lbs",
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = AppColors.Primary

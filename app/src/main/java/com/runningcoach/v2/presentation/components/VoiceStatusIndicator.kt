@@ -226,9 +226,9 @@ fun VoiceStatusBar(
                 ) {
                     Icon(
                         imageVector = if (statusData.isCoachingEnabled) {
-                            Icons.Default.VolumeUp
+                            Icons.Default.PlayArrow
                         } else {
-                            Icons.Default.VolumeOff
+                            Icons.Default.Close
                         },
                         contentDescription = if (statusData.isCoachingEnabled) {
                             "Mute Coaching"
@@ -335,7 +335,7 @@ private fun VoiceQueueIndicator(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Queue,
+                imageVector = Icons.Default.List,
                 contentDescription = "Queued Messages",
                 tint = AppColors.CoralAccent,
                 modifier = Modifier.size(16.dp)
@@ -363,7 +363,7 @@ fun VoiceErrorDialog(
             onDismissRequest = onDismiss,
             icon = {
                 Icon(
-                    imageVector = Icons.Default.Error,
+                    imageVector = Icons.Default.Warning,
                     contentDescription = "Error",
                     tint = AppColors.Error,
                     modifier = Modifier.size(32.dp)
@@ -436,14 +436,14 @@ fun VoiceErrorDialog(
 }
 
 private fun getStatusIcon(status: VoiceStatus) = when (status) {
-    VoiceStatus.INACTIVE -> Icons.Default.VolumeOff
+    VoiceStatus.INACTIVE -> Icons.Default.Close
     VoiceStatus.PREPARING -> Icons.Default.Refresh
-    VoiceStatus.GENERATING -> Icons.Default.AutoAwesome
-    VoiceStatus.SPEAKING -> Icons.Default.VolumeUp
-    VoiceStatus.ERROR -> Icons.Default.ErrorOutline
+    VoiceStatus.GENERATING -> Icons.Default.Star
+    VoiceStatus.SPEAKING -> Icons.Default.PlayArrow
+    VoiceStatus.ERROR -> Icons.Default.Warning
     VoiceStatus.API_LIMIT_REACHED -> Icons.Default.Warning
-    VoiceStatus.NETWORK_ERROR -> Icons.Default.SignalWifiOff
-    VoiceStatus.CACHE_HIT -> Icons.Default.Storage
+    VoiceStatus.NETWORK_ERROR -> Icons.Default.Warning
+    VoiceStatus.CACHE_HIT -> Icons.Default.CheckCircle
 }
 
 private fun getStatusColor(status: VoiceStatus) = when (status) {

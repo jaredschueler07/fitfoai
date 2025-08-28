@@ -43,7 +43,8 @@ class UserRepository(
                     weight = parseWeight(profileData.weight),
                     experienceLevel = profileData.fitnessLevel.name,
                     runningGoals = profileData.runningGoals.map { it.name },
-                    selectedCoach = "bennett" // Default coach
+                    selectedCoach = "bennett", // Default coach
+                    profileCompleted = true // Mark profile as completed
                 )
             }
             
@@ -168,6 +169,59 @@ class UserRepository(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to delete user", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun isOnboardingCompleted(): Boolean {
+        return try {
+            userDao.isOnboardingCompleted() ?: false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to check onboarding status", e)
+            false
+        }
+    }
+    
+    suspend fun isProfileCompleted(): Boolean {
+        return try {
+            userDao.isProfileCompleted() ?: false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to check profile status", e)
+            false
+        }
+    }
+    
+    suspend fun markOnboardingCompleted(): Result<Unit> {
+        return try {
+            userDao.updateOnboardingCompleted(true)
+            Log.i(TAG, "Marked onboarding as completed")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to mark onboarding as completed", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun markProfileCompleted(): Result<Unit> {
+        return try {
+            userDao.updateProfileCompleted(true)
+            Log.i(TAG, "Marked profile as completed")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to mark profile as completed", e)
+            Result.failure(e)
+        }
+    }
+    
+    // Debug method to reset onboarding for testing
+    suspend fun resetOnboarding(): Result<Unit> {
+        return try {
+            userDao.updateOnboardingCompleted(false)
+            userDao.updateProfileCompleted(false)
+            Log.i(TAG, "Reset onboarding status for testing")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to reset onboarding", e)
             Result.failure(e)
         }
     }

@@ -20,4 +20,16 @@ interface UserDao {
     
     @Query("SELECT * FROM users WHERE id = :userId")
     suspend fun getUserById(userId: Long): UserEntity?
+    
+    @Query("SELECT onboardingCompleted FROM users ORDER BY createdAt DESC LIMIT 1")
+    suspend fun isOnboardingCompleted(): Boolean?
+    
+    @Query("SELECT profileCompleted FROM users ORDER BY createdAt DESC LIMIT 1")
+    suspend fun isProfileCompleted(): Boolean?
+    
+    @Query("UPDATE users SET onboardingCompleted = :completed WHERE id = (SELECT id FROM users ORDER BY createdAt DESC LIMIT 1)")
+    suspend fun updateOnboardingCompleted(completed: Boolean)
+    
+    @Query("UPDATE users SET profileCompleted = :completed WHERE id = (SELECT id FROM users ORDER BY createdAt DESC LIMIT 1)")
+    suspend fun updateProfileCompleted(completed: Boolean)
 }

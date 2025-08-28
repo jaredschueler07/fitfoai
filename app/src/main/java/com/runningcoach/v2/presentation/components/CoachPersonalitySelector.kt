@@ -56,7 +56,7 @@ fun CoachPersonalitySelector(
                 motivationLevel = "Steady & Professional",
                 sampleMessage = "Great pace! Your heart rate is in the optimal zone. Keep this rhythm for maximum efficiency.",
                 color = AppColors.AthleteBlue,
-                icon = Icons.Default.TrendingUp
+                icon = Icons.Default.Person
             ),
             CoachPersonalityProfile(
                 id = "mariana",
@@ -67,7 +67,7 @@ fun CoachPersonalitySelector(
                 motivationLevel = "High Energy",
                 sampleMessage = "¡Increíble! You're crushing this run! Your energy is contagious - keep that fire burning!",
                 color = AppColors.CoralAccent,
-                icon = Icons.Default.Flash
+                icon = Icons.Default.Star
             ),
             CoachPersonalityProfile(
                 id = "becs",
@@ -78,7 +78,7 @@ fun CoachPersonalitySelector(
                 motivationLevel = "Calm & Steady",
                 sampleMessage = "Feel your breath, feel your stride. You're exactly where you need to be. Trust the process.",
                 color = AppColors.Success,
-                icon = Icons.Default.SelfImprovement
+                icon = Icons.Default.Favorite
             ),
             CoachPersonalityProfile(
                 id = "goggins",
@@ -89,7 +89,7 @@ fun CoachPersonalitySelector(
                 motivationLevel = "Maximum Intensity",
                 sampleMessage = "This is where champions are made! When your mind says stop, you keep going! Stay hard!",
                 color = AppColors.Error,
-                icon = Icons.Default.LocalFireDepartment
+                icon = Icons.Default.Person
             )
         )
     }
@@ -128,7 +128,7 @@ fun CoachPersonalitySelector(
                 }
                 
                 Icon(
-                    imageVector = Icons.Default.RecordVoiceOver,
+                    imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Voice Coaching",
                     tint = AppColors.CoralAccent,
                     modifier = Modifier.size(32.dp)
@@ -318,7 +318,7 @@ private fun CoachPersonalityCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
-                        imageVector = if (isPreviewPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                        imageVector = if (isPreviewPlaying) Icons.Default.PlayArrow else Icons.Default.PlayArrow,
                         contentDescription = if (isPreviewPlaying) "Stop Preview" else "Preview Voice",
                         modifier = Modifier.size(16.dp)
                     )
@@ -377,7 +377,7 @@ private fun SelectedCoachDetails(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            imageVector = if (isPreviewPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            imageVector = if (isPreviewPlaying) Icons.Default.PlayArrow else Icons.Default.PlayArrow,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
@@ -456,7 +456,7 @@ private fun SelectedCoachDetails(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.FormatQuote,
+                            imageVector = Icons.Default.Person,
                             contentDescription = "Quote",
                             tint = coach.color,
                             modifier = Modifier.size(16.dp)

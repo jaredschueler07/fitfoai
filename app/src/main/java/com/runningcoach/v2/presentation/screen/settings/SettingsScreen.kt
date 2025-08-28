@@ -16,6 +16,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import android.util.Log
+import kotlinx.coroutines.launch
+import com.runningcoach.v2.data.local.FITFOAIDatabase
+import com.runningcoach.v2.data.repository.UserRepository
 import com.runningcoach.v2.presentation.theme.AppColors
 import com.runningcoach.v2.presentation.components.VoiceCoachingCard
 import com.runningcoach.v2.presentation.components.CoachPersonality
@@ -248,6 +253,11 @@ fun SettingsScreen(
                 )
             }
             
+            item {
+                // Debug Section (only visible in debug builds)
+                DebugSettings()
+            }
+            
             // Bottom spacing for navigation
             item {
                 Spacer(modifier = Modifier.height(80.dp))
@@ -365,7 +375,7 @@ private fun AudioSettings(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.VolumeDown,
+                imageVector = Icons.Default.Close,
                 contentDescription = "Lower Volume",
                 tint = Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.size(20.dp)
@@ -383,7 +393,7 @@ private fun AudioSettings(
             )
             
             Icon(
-                imageVector = Icons.Default.VolumeUp,
+                imageVector = Icons.Default.PlayArrow,
                 contentDescription = "Raise Volume",
                 tint = Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.size(20.dp)
@@ -429,7 +439,7 @@ private fun AudioSettings(
         SettingItem(
             title = "Audio Output",
             subtitle = "Bluetooth Headphones",
-            icon = Icons.Default.Headset,
+            icon = Icons.Default.PlayArrow,
             onClick = { /* Show audio output options */ }
         )
     }
@@ -734,14 +744,14 @@ private fun PrivacySettings(
         SettingItem(
             title = "Privacy Policy",
             subtitle = "View our privacy policy",
-            icon = Icons.Default.Security,
+            icon = Icons.Default.Lock,
             onClick = { /* Open privacy policy */ }
         )
         
         SettingItem(
             title = "Data Export",
             subtitle = "Export your workout data",
-            icon = Icons.Default.Download,
+            icon = Icons.Default.ArrowBack,
             onClick = { /* Open data export */ }
         )
     }
@@ -760,14 +770,14 @@ private fun AppInfoSettings() {
         SettingItem(
             title = "Help & Support",
             subtitle = "Get help and contact support",
-            icon = Icons.Default.HelpOutline,
+            icon = Icons.Default.Info,
             onClick = { /* Open support */ }
         )
         
         SettingItem(
             title = "Terms of Service",
             subtitle = "View terms and conditions",
-            icon = Icons.Default.Article,
+            icon = Icons.Default.Info,
             onClick = { /* Open terms */ }
         )
         
@@ -831,4 +841,82 @@ private fun SettingItem(
             )
         }
     }
+}
+
+@Composable
+private fun DebugSettings() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    var isResetting by remember { mutableStateOf(false) }
+    var resetMessage by remember { mutableStateOf<String?>(null) }
+    
+    SettingsSection(
+        title = "Debug Tools",
+        description = "Development and testing tools",
+        content = {
+        Column {
+            // Reset Onboarding Button
+            Button(
+                onClick = {
+                    scope.launch {
+                        isResetting = true
+                        resetMessage = null
+                        
+                        try {
+                            val database = FITFOAIDatabase.getDatabase(context)
+                            val userRepository = UserRepository(database)
+                            
+                            val result = userRepository.resetOnboarding()
+                            resetMessage = if (result.isSuccess) {
+                                "Onboarding reset successfully! Restart the app to see onboarding screens."
+                            } else {
+                                "Failed to reset onboarding: ${result.exceptionOrNull()?.message}"
+                            }
+                            Log.i("DebugSettings", "Onboarding reset result: $resetMessage")
+                        } catch (e: Exception) {
+                            resetMessage = "Error resetting onboarding: ${e.message}"
+                            Log.e("DebugSettings", "Error resetting onboarding", e)
+                        } finally {
+                            isResetting = false
+                        }
+                    }
+                },
+                enabled = !isResetting,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.CoralAccent,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isResetting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Resetting...")
+                } else {
+                    Text("Reset Onboarding")
+                }
+            }
+            
+            // Show reset message
+            resetMessage?.let { message ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (message.startsWith("Onboarding reset successfully")) {
+                        Color.Green
+                    } else {
+                        Color.Red
+                    },
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+        }
+        }
+    )
 }

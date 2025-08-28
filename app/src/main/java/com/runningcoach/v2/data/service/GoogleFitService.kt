@@ -47,6 +47,15 @@ class GoogleFitService(private val context: Context) {
         val height: Float? = null // in meters
     )
     
+    data class UserProfileData(
+        val name: String? = null,
+        val email: String? = null,
+        val weight: Float? = null, // in kg
+        val height: Float? = null, // in meters
+        val weightImperial: String? = null, // formatted as "150 lbs"
+        val heightImperial: String? = null // formatted as "5'8\""
+    )
+    
     data class DailyStepsData(
         val date: String,
         val steps: Int
@@ -250,6 +259,58 @@ class GoogleFitService(private val context: Context) {
             Result.success(1.75f) // Mock height in meters
         } catch (e: Exception) {
             Log.e(TAG, "Error reading height data", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun getUserProfileData(): Result<UserProfileData> {
+        return try {
+            Log.i(TAG, "Retrieving user profile data from Google Fit")
+            
+            val account = getCurrentAccount()
+            if (account == null || !hasPermissions(account)) {
+                Log.w(TAG, "No Google account or permissions available")
+                return Result.failure(Exception("Google Fit not connected or no permissions"))
+            }
+            
+            // Get user's basic info from Google account
+            val name = account.displayName
+            val email = account.email
+            
+            // Get fitness data
+            val weightResult = getLatestWeight()
+            val heightResult = getLatestHeight()
+            
+            val weight = weightResult.getOrNull()
+            val height = heightResult.getOrNull()
+            
+            // Convert to imperial units
+            val weightImperial = weight?.let { 
+                val pounds = (it * 2.20462).toInt()
+                "$pounds lbs"
+            }
+            
+            val heightImperial = height?.let { heightMeters ->
+                val totalInches = (heightMeters * 39.3701).toInt()
+                val feet = totalInches / 12
+                val inches = totalInches % 12
+                "$feet'$inches\""
+            }
+            
+            val profileData = UserProfileData(
+                name = name,
+                email = email,
+                weight = weight,
+                height = height,
+                weightImperial = weightImperial,
+                heightImperial = heightImperial
+            )
+            
+            Log.i(TAG, "Retrieved user profile: name=$name, weight=$weightImperial, height=$heightImperial")
+            Result.success(profileData)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user profile data", e)
             Result.failure(e)
         }
     }

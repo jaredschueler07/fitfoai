@@ -2,6 +2,62 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Canonical Bug Report List
+
+### Critical Issues - Immediate Action Required
+
+1. **Google Fit Profile Auto-Fill Not Working**
+   - **Status**: Critical - blocks onboarding flow
+   - **Description**: Profile fields (name, height, weight) not pre-filled from Google Fit data
+   - **Expected Behavior**: After successful Google Fit connection, user profile should auto-populate
+   - **Current Behavior**: Fields remain empty despite successful connection
+   - **Impact**: Forces manual data entry, poor UX
+   - **Files Affected**: `PersonalizeProfileScreen.kt`, `GoogleFitService.kt`
+
+2. **No Persistent User Profiles**
+   - **Status**: Critical - testing workflow blocked
+   - **Description**: Cannot save/restore onboarding progress, forces complete re-onboarding
+   - **Expected Behavior**: Save profile once, allow skipping onboarding on subsequent launches
+   - **Current Behavior**: Must complete full onboarding flow every time
+   - **Impact**: Severely hampers testing and development workflow
+   - **Files Affected**: `MainActivity.kt`, `UserRepository.kt`, navigation flow
+
+3. **Google Maps Slow Load Performance**
+   - **Status**: High Priority - UX issue
+   - **Description**: Google Maps takes excessive time to initialize and display
+   - **Expected Behavior**: Map should load within 2-3 seconds
+   - **Current Behavior**: Long delays before map becomes interactive
+   - **Impact**: Poor user experience during run tracking setup
+   - **Files Affected**: `RunTrackingScreen.kt`, map integration components
+
+4. **Extensive Placeholder Content**
+   - **Status**: Medium Priority - production readiness
+   - **Description**: Numerous TODO placeholders and mock data instead of functional implementation
+   - **Expected Behavior**: Real functionality with proper data handling
+   - **Current Behavior**: Placeholder text and stub implementations
+   - **Impact**: App appears incomplete and unprofessional
+   - **Files Affected**: Multiple service and UI files
+
+5. **Metric Units Instead of Imperial**
+   - **Status**: Medium Priority - localization issue
+   - **Description**: Height/weight inputs expect metric units (cm/kg) instead of imperial (ft/lbs)
+   - **Expected Behavior**: Imperial units for US-based usage
+   - **Current Behavior**: Metric unit placeholders and validation
+   - **Impact**: Confusing UX for American users
+   - **Files Affected**: `PersonalizeProfileScreen.kt`, data models
+
+### Resolution Plan Requirements
+
+- Google Fit integration must provide at minimum a valid name to proceed with profile setup
+- User profiles must persist between app sessions with option to reset for testing
+- Replace all placeholder content with functional implementations
+- Convert all units to imperial system (feet/inches, pounds, miles, Fahrenheit)
+- Investigate alternative mapping solutions for performance comparison
+
+### Next Steps
+
+Sprint planning required with task delegation to specialized agents for systematic resolution of all identified issues.
+
 ## Project Overview
 
 FITFO AI (RunningCoach v2) is an Android application built with Kotlin and Jetpack Compose. It's an AI-powered running coach app that provides personalized training plans, real-time coaching, and integrations with fitness apps like Fitbit, Google Fit, and Spotify.
