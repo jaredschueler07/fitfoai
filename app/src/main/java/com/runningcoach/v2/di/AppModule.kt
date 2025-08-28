@@ -4,7 +4,11 @@ import android.content.Context
 import androidx.room.Room
 import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.local.dao.RunSessionDao
+import com.runningcoach.v2.data.local.prefs.TokenStorageManager
+import com.runningcoach.v2.data.local.prefs.TokenStorageManagerImpl
 import com.runningcoach.v2.data.repository.RunSessionRepositoryImpl
+import com.runningcoach.v2.data.repository.SpotifyAuthRepository
+import com.runningcoach.v2.data.repository.SpotifyAuthRepositoryImpl
 import com.runningcoach.v2.data.service.*
 import com.runningcoach.v2.domain.repository.RunSessionRepository
 import com.runningcoach.v2.domain.usecase.*
@@ -24,6 +28,10 @@ import kotlinx.serialization.json.Json
  * [TECH-DEBT] Replace with Hilt once KSP compatibility issues are resolved.
  */
 class AppContainer(private val context: Context) {
+
+    // TODO: Replace with actual values from BuildConfig or encrypted local.properties
+    private val spotifyClientId: String = "YOUR_SPOTIFY_CLIENT_ID_FROM_BUILDCONFIG"
+    private val spotifyRedirectUri: String = "YOUR_SPOTIFY_REDIRECT_URI_FROM_BUILDCONFIG"
 
     // HttpClient for network services
     private val httpClient: HttpClient by lazy {
@@ -127,9 +135,22 @@ class AppContainer(private val context: Context) {
     val googleFitService: GoogleFitService by lazy {
         GoogleFitService(context)
     }
-    
-    val spotifyService: SpotifyService by lazy {
-        SpotifyService(context, httpClient)
+
+    // Spotify Integration
+    private val tokenStorageManager: TokenStorageManager by lazy {
+        TokenStorageManagerImpl(context)
+    }
+
+    private val spotifyService: SpotifyService by lazy {
+        SpotifyService()
+    }
+
+    val spotifyAuthRepository: SpotifyAuthRepository by lazy {
+        SpotifyAuthRepositoryImpl(spotifyService, tokenStorageManager, spotifyClientId, spotifyRedirectUri)
+    }
+
+    val authenticateSpotifyUseCase: AuthenticateSpotifyUseCase by lazy {
+        AuthenticateSpotifyUseCase(spotifyAuthRepository, spotifyRedirectUri)
     }
     
     val runSessionManager: RunSessionManager by lazy {

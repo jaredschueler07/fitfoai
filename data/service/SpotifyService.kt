@@ -11,11 +11,6 @@ import io.ktor.http.*
 import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
-import java.security.MessageDigest
-import java.security.SecureRandom
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import android.util.Base64
 import java.net.URLEncoder
 
 class SpotifyService {
@@ -33,52 +28,68 @@ class SpotifyService {
         // Add other configurations like default request headers if needed
     }
 
+    private val tokenEndpoint = "https://accounts.spotify.com/api/token"
+    private val apiBaseUrl = "https://api.spotify.com/v1"
+
     suspend fun exchangeCodeForTokens(
         code: String,
         redirectUri: String,
         clientId: String,
         codeVerifier: String
-    ): String {
-        // Placeholder for the API call to exchange authorization code for tokens
-        // This function will make a POST request to the Spotify token endpoint
-        // and return the response (likely a JSON string for now).
-        // The actual parsing and handling of tokens will be in the repository.
-        return "Placeholder for token exchange response"
+    ): SpotifyTokenResponse {
+        val response: HttpResponse = client.post(tokenEndpoint) {
+            header(HttpHeaders.ContentType, ContentType.Application.FormUrlEncoded.toString())
+            setBody(FormDataContent(parameters {
+                append("grant_type", "authorization_code")
+                append("code", code)
+                append("redirect_uri", redirectUri)
+                append("client_id", clientId)
+                append("code_verifier", codeVerifier)
+            }))
+        }
+        return response.body()
     }
 
-    // Placeholder for other Spotify API call functions (e.g., fetching user profile, audio features)
-
-    fun generateAuthorizationUrl(): Pair<String, String> {
-        val codeVerifier = generateCodeVerifier()
-        val codeChallenge = generateCodeChallenge(codeVerifier)
-
-        // TODO: Replace with secure retrieval of Client ID and Redirect URI
-        val clientId = "YOUR_CLIENT_ID"
-        val redirectUri = "YOUR_REDIRECT_URI" // This must match the one registered in Spotify Dashboard
-        val scopes = "user-top-read playlist-modify-public playlist-modify-private user-modify-playback-state" // Add necessary scopes
-
-        val authUrl = "https://accounts.spotify.com/authorize?" +
-                "response_type=code" +
-                "&client_id=$clientId" +
-                "&redirect_uri=${URLEncoder.encode(redirectUri, "UTF-8")}" +
-                "&scope=${URLEncoder.encode(scopes, "UTF-8")}" +
-                "&code_challenge=$codeChallenge" +
-                "&code_challenge_method=S256"
-
-        return Pair(authUrl, codeVerifier)
+    suspend fun refreshToken(
+        refreshToken: String,
+        clientId: String
+    ): SpotifyTokenResponse {
+        val response: HttpResponse = client.post(tokenEndpoint) {
+            header(HttpHeaders.ContentType, ContentType.Application.FormUrlEncoded.toString())
+            setBody(FormDataContent(parameters {
+                append("grant_type", "refresh_token")
+                append("refresh_token", refreshToken)
+                append("client_id", clientId)
+            }))
+        }
+        return response.body()
     }
 
-    private fun generateCodeVerifier(): String {
-        val secureRandom = SecureRandom()
-        val bytes = ByteArray(32)
-        secureRandom.nextBytes(bytes)
-        return Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+    suspend fun getUserProfile(accessToken: String): UserProfileData {
+        val response: HttpResponse = client.get("$apiBaseUrl/me") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+        }
+        return response.body()
     }
 
-    private fun generateCodeChallenge(codeVerifier: String): String {
-        val bytes = codeVerifier.toByteArray(Charsets.US_ASCII)
-        val messageDigest = MessageDigest.getInstance("SHA-256")
-        val digest = messageDigest.digest(bytes)
-        return Base64.encodeToString(digest, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+    suspend fun getUserTopItems(accessToken: String, type: String = "artists", limit: Int = 20, offset: Int = 0): TopItemsResponse<Artist> { // Default to artists
+        val response: HttpResponse = client.get("$apiBaseUrl/me/top/$type") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+            url {
+                parameters.append("limit", limit.toString())
+                parameters.append("offset", offset.toString())
+            }
+        }
+        return response.body()
+    }
+
+    suspend fun getTrackAudioFeatures(accessToken: String, trackIds: List<String>): AudioFeaturesResponse {
+        val response: HttpResponse = client.get("$apiBaseUrl/audio-features") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+            url {
+                parameters.append("ids", trackIds.joinToString(","))
+            }
+        }
+        return response.body()
     }
 }

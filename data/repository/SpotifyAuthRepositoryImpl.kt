@@ -1,100 +1,120 @@
 package com.runningcoach.v2.data.repository
 
 import com.runningcoach.v2.data.service.SpotifyService
-import com.runningcoach.v2.data.local.prefs.TokenStorageManager // Assuming this class exists
+import com.runningcoach.v2.data.local.prefs.TokenStorageManager
 import java.security.MessageDigest
 import java.security.SecureRandom
 import android.util.Base64
-import com.runningcoach.v2.data.service.SpotifyTokenResponse // Import the data class from SpotifyService
+import com.runningcoach.v2.data.service.SpotifyTokenResponse
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class SpotifyAuthRepositoryImpl(
     private val spotifyService: SpotifyService,
-    private val tokenStorageManager: TokenStorageManager // Assuming this is your secure storage manager
+    private val tokenStorageManager: TokenStorageManager,
+    private val clientId: String,
+    private val redirectUri: String
 ) : SpotifyAuthRepository {
 
-    // Hardcoded for now, move to a more secure location
-    private val clientId = "YOUR_SPOTIFY_CLIENT_ID"
-    private val redirectUri = "YOUR_REDIRECT_URI"
     private val authEndpoint = "https://accounts.spotify.com/authorize"
-    private val tokenEndpoint = "https://accounts.spotify.com/api/token"
 
-    override fun getAuthorizationUrl(scopes: List<String>, redirectUri: String): String {
+    private var currentCodeVerifier: String? = null
+    private val refreshAccessTokenMutex = Mutex()
+
+    override fun getAuthorizationUrl(scopes: List<String>, redirectUri: String): Pair<String, String> {
         val codeVerifier = generateRandomString(128)
         val codeChallenge = generateCodeChallenge(codeVerifier)
-
-        // Save the code verifier for later token exchange
-        tokenStorageManager.saveCodeVerifier(codeVerifier)
+        currentCodeVerifier = codeVerifier // Store for later use in token exchange
 
         val scopeString = scopes.joinToString(" ")
 
-        return "$authEndpoint?" +
+        val url = "$authEndpoint?" +
                 "response_type=code" +
                 "&client_id=$clientId" +
                 "&scope=$scopeString" +
                 "&redirect_uri=$redirectUri" +
                 "&code_challenge=$codeChallenge" +
                 "&code_challenge_method=S256"
+        return Pair(url, codeVerifier)
     }
 
     override suspend fun exchangeCodeForTokens(
         authorizationCode: String,
         redirectUri: String,
         codeVerifier: String
-    ): SpotifyTokens {
-        val tokenResponse: SpotifyTokenResponse = spotifyService.exchangeCodeForTokens(
-            code = authorizationCode,
-            redirectUri = redirectUri,
-            clientId = clientId,
-            codeVerifier = codeVerifier
-        )
-        return SpotifyTokens(
-            accessToken = tokenResponse.accessToken,
-            refreshToken = tokenResponse.refreshToken,
-            expiresIn = tokenResponse.expiresIn
-        )
+    ): SpotifyTokenResponse {
+        return try {
+            val tokenResponse: SpotifyTokenResponse = spotifyService.exchangeCodeForTokens(
+                code = authorizationCode,
+                redirectUri = redirectUri,
+                clientId = clientId,
+                codeVerifier = codeVerifier
+            )
+            tokenStorageManager.saveTokens(tokenResponse)
+            tokenResponse
+        } catch (e: Exception) {
+            // Log the error and rethrow or wrap in a custom exception
+            throw e
+        }
     }
 
-    override suspend fun refreshToken(refreshToken: String): SpotifyTokens {
-        val tokenResponse: SpotifyTokenResponse = spotifyService.refreshToken(
-            refreshToken = refreshToken,
-            clientId = clientId
-        )
-        return SpotifyTokens(
-            accessToken = tokenResponse.accessToken,
-            refreshToken = tokenResponse.refreshToken ?: refreshToken, // Use new refresh token if provided, otherwise keep old
-            expiresIn = tokenResponse.expiresIn
-        )
+    override suspend fun refreshToken(): SpotifyTokenResponse {
+        return refreshAccessTokenMutex.withLock {
+            val refreshToken = tokenStorageManager.getRefreshToken()
+                ?: throw IllegalStateException("No refresh token available.")
+
+            try {
+                val tokenResponse: SpotifyTokenResponse = spotifyService.refreshToken(
+                    refreshToken = refreshToken,
+                    clientId = clientId
+                )
+                tokenStorageManager.saveTokens(tokenResponse)
+                tokenResponse
+            } catch (e: Exception) {
+                // Log the error, clear tokens if refresh fails to prevent infinite loops, and rethrow
+                tokenStorageManager.clearTokens()
+                throw e
+            }
+        }
     }
 
-    override fun saveTokens(tokens: SpotifyTokens) {
-        tokenStorageManager.saveTokens(tokens)
-    }
+    override suspend fun getValidAccessToken(): String? {
+        val accessToken = tokenStorageManager.getAccessToken()
+        val expiresIn = tokenStorageManager.getExpiresIn()
 
-    override fun getTokens(): SpotifyTokens? {
-        return tokenStorageManager.getTokens()
+        if (accessToken == null || expiresIn == 0L) {
+            return null // No token stored
+        }
+
+        val currentTime = System.currentTimeMillis()
+        // Refresh token if it expires within the next 60 seconds (or is already expired)
+        if (expiresIn < currentTime + (60 * 1000)) {
+            return try {
+                refreshToken().accessToken
+            } catch (e: Exception) {
+                // Handle refresh failure, e.g., re-authenticate
+                null
+            }
+        }
+        return accessToken
     }
 
     override fun clearTokens() {
         tokenStorageManager.clearTokens()
-        tokenStorageManager.clearCodeVerifier()
+        currentCodeVerifier = null // Clear the stored code verifier
+    }
+
+    // Utility functions for PKCE
+    private fun generateRandomString(length: Int): String {
+        val random = SecureRandom()
+        val bytes = ByteArray(length)
+        random.nextBytes(bytes)
+        return Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+    }
+
+    private fun generateCodeChallenge(codeVerifier: String): String {
+        val sha256 = MessageDigest.getInstance("SHA-256")
+        val digest = sha256.digest(codeVerifier.toByteArray())
+        return Base64.encodeToString(digest, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
     }
 }
-
-// Assuming these data classes exist in data/service/model/
-// data class SpotifyTokenResponse(
-//     val accessToken: String,
-//     val tokenType: String,
-//     val expiresIn: Long,
-//     val refreshToken: String?,
-//     val scope: String
-// )
-
-// Assuming this interface exists in data/local/prefs/
-// interface TokenStorageManager {
-//     fun saveTokens(tokens: SpotifyTokens)
-//     fun getTokens(): SpotifyTokens?
-//     fun clearTokens()
-//     fun saveCodeVerifier(codeVerifier: String)
-//     fun getCodeVerifier(): String?
-//     fun clearCodeVerifier()
-// }

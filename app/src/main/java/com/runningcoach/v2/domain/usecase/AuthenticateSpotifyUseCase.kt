@@ -1,12 +1,13 @@
 package com.runningcoach.v2.domain.usecase
 
 import com.runningcoach.v2.data.repository.SpotifyAuthRepository
+import javax.inject.Inject
 
-class AuthenticateSpotifyUseCase(
-    private val spotifyAuthRepository: SpotifyAuthRepository,
-    private val redirectUri: String
+class AuthenticateSpotifyUseCase @Inject constructor(
+    private val spotifyAuthRepository: SpotifyAuthRepository
 ) {
     private val scopes = listOf("user-top-read", "playlist-modify-public", "playlist-modify-private", "user-modify-playback-state") // Define required scopes
+    private val redirectUri = "YOUR_REDIRECT_URI" // Replace with your configured redirect URI
 
     fun execute(): Pair<String, String> {
         return spotifyAuthRepository.getAuthorizationUrl(scopes, redirectUri)

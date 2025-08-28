@@ -1,13 +1,15 @@
 package com.runningcoach.v2.data.repository
 
+import com.runningcoach.v2.data.service.SpotifyTokenResponse
+
 interface SpotifyAuthRepository {
     /**
-     * Initiates the Spotify authorization flow by generating the authorization URL.
+     * Initiates the Spotify authorization flow by generating the authorization URL and a code verifier for PKCE.
      * @param scopes A list of required Spotify scopes.
      * @param redirectUri The redirect URI configured in the Spotify Developer Dashboard.
-     * @return The authorization URL to open in a browser or custom tab.
+     * @return A Pair containing the authorization URL (String) and the generated PKCE code verifier (String).
      */
-    fun getAuthorizationUrl(scopes: List<String>, redirectUri: String): String
+    fun getAuthorizationUrl(scopes: List<String>, redirectUri: String): Pair<String, String>
 
     /**
      * Exchanges the authorization code received from Spotify for access and refresh tokens.
@@ -21,37 +23,23 @@ interface SpotifyAuthRepository {
         authorizationCode: String,
         redirectUri: String,
         codeVerifier: String
-    ): SpotifyTokens
+    ): SpotifyTokenResponse
 
     /**
      * Refreshes an expired access token using the refresh token.
-     * @param refreshToken The stored refresh token.
-     * @return A data class containing the new access token (and potentially a new refresh token) and expiry time.
+     * @return A data class containing the new access token and expiry time.
      * @throws Exception if the token refresh fails.
      */
-    suspend fun refreshToken(refreshToken: String): SpotifyTokens
+    suspend fun refreshToken(): SpotifyTokenResponse
 
     /**
-     * Securely saves the Spotify tokens.
-     * @param tokens The SpotifyTokens data class to save.
+     * Retrieves a valid access token. If the current token is expired, it attempts to refresh it.
+     * @return A valid access token, or null if no valid token can be obtained.
      */
-    fun saveTokens(tokens: SpotifyTokens)
-
-    /**
-     * Retrieves the securely stored Spotify tokens.
-     * @return The stored SpotifyTokens data class, or null if no tokens are stored.
-     */
-    fun getTokens(): SpotifyTokens?
+    suspend fun getValidAccessToken(): String?
 
     /**
      * Clears the securely stored Spotify tokens.
      */
     fun clearTokens()
 }
-
-data class SpotifyTokens(
-    val accessToken: String,
-    val refreshToken: String,
-    val expiresIn: Long, // Expiry time in seconds from when it was issued
-    val issuedAt: Long = System.currentTimeMillis() // Timestamp when the token was issued
-)
