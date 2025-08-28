@@ -7,13 +7,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import android.util.Log
 import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.repository.UserRepository
+import com.runningcoach.v2.data.service.GoogleFitService
 import com.runningcoach.v2.domain.model.FitnessLevel
 import com.runningcoach.v2.domain.model.RunningGoal
 import com.runningcoach.v2.presentation.components.AppCard
@@ -32,6 +35,7 @@ fun PersonalizeProfileScreen(
     // Repository setup
     val database = remember { FITFOAIDatabase.getDatabase(context) }
     val userRepository = remember { UserRepository(database) }
+    val googleFitService = remember { GoogleFitService(context) }
     
     var name by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
@@ -42,9 +46,58 @@ fun PersonalizeProfileScreen(
     
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoadingFromGoogleFit by remember { mutableStateOf(false) }
+    var autoFillAttempted by remember { mutableStateOf(false) }
+    
+    // Google Fit connection state
+    val isGoogleFitConnected by googleFitService.isConnected.collectAsState()
+
+    // Auto-fill from Google Fit when connected
+    LaunchedEffect(isGoogleFitConnected) {
+        if (isGoogleFitConnected && !autoFillAttempted) {
+            autoFillAttempted = true
+            isLoadingFromGoogleFit = true
+            
+            try {
+                val profileResult = googleFitService.getUserProfileData()
+                
+                if (profileResult.isSuccess) {
+                    val profileData = profileResult.getOrNull()
+                    profileData?.let { data ->
+                        // Auto-fill name (required field)
+                        data.name?.let { userName ->
+                            if (name.isBlank()) {
+                                name = userName
+                            }
+                        }
+                        
+                        // Auto-fill height and weight with imperial units
+                        data.heightImperial?.let { heightStr ->
+                            if (height.isBlank()) {
+                                height = heightStr
+                            }
+                        }
+                        
+                        data.weightImperial?.let { weightStr ->
+                            if (weight.isBlank()) {
+                                weight = weightStr
+                            }
+                        }
+                    }
+                } else {
+                    Log.w("PersonalizeProfile", "Failed to get Google Fit profile data: ${profileResult.exceptionOrNull()?.message}")
+                }
+            } catch (e: Exception) {
+                Log.e("PersonalizeProfile", "Error auto-filling from Google Fit", e)
+            } finally {
+                isLoadingFromGoogleFit = false
+            }
+        }
+    }
 
     val scrollState = rememberScrollState()
     
+    // Form validation - name is required, others can be filled manually if Google Fit fails
     val isFormValid = name.isNotBlank() && age.isNotBlank() && 
                      height.isNotBlank() && weight.isNotBlank()
 
@@ -68,8 +121,51 @@ fun PersonalizeProfileScreen(
             text = "Help us customize your training experience",
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.Neutral400,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = 16.dp)
         )
+        
+        // Google Fit auto-fill status
+        if (isGoogleFitConnected && isLoadingFromGoogleFit) {
+            AppCard(
+                modifier = Modifier.padding(bottom = 16.dp),
+                backgroundColor = AppColors.Primary.copy(alpha = 0.1f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = AppColors.Primary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Loading profile data from Google Fit...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AppColors.Primary
+                    )
+                }
+            }
+        } else if (isGoogleFitConnected && autoFillAttempted) {
+            AppCard(
+                modifier = Modifier.padding(bottom = 16.dp),
+                backgroundColor = AppColors.Primary.copy(alpha = 0.1f)
+            ) {
+                Text(
+                    text = if (name.isNotBlank()) {
+                        "✓ Profile auto-filled from Google Fit"
+                    } else {
+                        "Google Fit connected - manual entry required"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.Primary,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Basic Info Section
         AppCard(
@@ -275,6 +371,12 @@ fun PersonalizeProfileScreen(
                     val saveResult = userRepository.saveUserProfile(profileData)
                     
                     if (saveResult.isSuccess) {
+                        // Mark profile as completed
+                        val profileCompleteResult = userRepository.markProfileCompleted()
+                        if (profileCompleteResult.isFailure) {
+                            Log.w("PersonalizeProfile", "Failed to mark profile as completed: ${profileCompleteResult.exceptionOrNull()?.message}")
+                        }
+                        
                         // Profile saved successfully, proceed to next screen
                         onComplete(profileData)
                     } else {

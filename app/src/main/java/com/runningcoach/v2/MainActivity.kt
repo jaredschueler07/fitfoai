@@ -8,7 +8,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -34,6 +37,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
+import com.runningcoach.v2.data.local.FITFOAIDatabase
+import com.runningcoach.v2.data.repository.UserRepository
 
 // @AndroidEntryPoint - Temporarily disabled due to Hilt KSP compatibility
 class MainActivity : ComponentActivity() {
@@ -130,9 +135,26 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun RunningCoachApp() {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    
+    // State for determining start destination
+    var startDestination by remember { mutableStateOf<String?>(null) }
+    
+    // Check onboarding status on app launch
+    LaunchedEffect(Unit) {
+        val database = FITFOAIDatabase.getDatabase(context)
+        val userRepository = UserRepository(database)
+        
+        val isOnboardingCompleted = userRepository.isOnboardingCompleted()
+        startDestination = if (isOnboardingCompleted) {
+            Screen.Dashboard.route
+        } else {
+            Screen.Welcome.route
+        }
+    }
     
     // Determine which screens should show bottom navigation
     val screensWithBottomNav = listOf(
@@ -150,11 +172,13 @@ fun RunningCoachApp() {
             }
         }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Welcome.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
+        // Only render NavHost after start destination is determined
+        startDestination?.let { destination ->
+            NavHost(
+                navController = navController,
+                startDestination = destination,
+                modifier = Modifier.padding(innerPadding)
+            ) {
             // Onboarding Flow
             composable(Screen.Welcome.route) {
                 WelcomeScreen(
@@ -229,7 +253,8 @@ fun RunningCoachApp() {
                 val viewModel = RunTrackingViewModel(
                     app.appContainer.startRunSessionUseCase,
                     app.appContainer.trackRunSessionUseCase,
-                    app.appContainer.endRunSessionUseCase
+                    app.appContainer.endRunSessionUseCase,
+                    app.appContainer.voiceCoachingManager
                 )
                 
                 RunTrackingScreen(
@@ -273,6 +298,15 @@ fun RunningCoachApp() {
                         navController.popBackStack()
                     }
                 )
+            }
+            }
+        } ?: run {
+            // Show loading screen while determining start destination
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
         }
     }

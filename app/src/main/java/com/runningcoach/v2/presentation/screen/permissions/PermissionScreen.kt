@@ -234,7 +234,7 @@ private fun BatteryOptimizationStep(
     PermissionStepCard(
         title = "Optimize Battery Settings",
         description = "For the best tracking experience, disable battery optimization for FITFO AI.",
-        icon = Icons.Default.Battery90,
+        icon = Icons.Default.Warning,
         benefits = listOf(
             "Reliable GPS tracking",
             "Consistent voice coaching",

@@ -11,6 +11,12 @@ import com.runningcoach.v2.domain.usecase.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import io.ktor.client.*
+import io.ktor.client.engine.android.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
 
 /**
  * Manual dependency injection container.
@@ -18,6 +24,21 @@ import kotlinx.coroutines.SupervisorJob
  * [TECH-DEBT] Replace with Hilt once KSP compatibility issues are resolved.
  */
 class AppContainer(private val context: Context) {
+
+    // HttpClient for network services
+    private val httpClient: HttpClient by lazy {
+        HttpClient(Android) {
+            install(ContentNegotiation) {
+                json(Json {
+                    ignoreUnknownKeys = true
+                    prettyPrint = true
+                })
+            }
+            install(Logging) {
+                level = LogLevel.INFO
+            }
+        }
+    }
 
     private val database: FITFOAIDatabase by lazy {
         Room.databaseBuilder(
@@ -41,7 +62,7 @@ class AppContainer(private val context: Context) {
     
     // Permission Management
     val permissionManager: PermissionManager by lazy {
-        PermissionManager(context)
+        PermissionManager(context as androidx.activity.ComponentActivity)
     }
     
     // Audio Management
@@ -51,17 +72,17 @@ class AppContainer(private val context: Context) {
     
     // ElevenLabs Service
     private val elevenLabsService: ElevenLabsService by lazy {
-        ElevenLabsService()
+        ElevenLabsService(httpClient, context)
     }
     
     // Fitness Coach Agent
     private val fitnessCoachAgent: FitnessCoachAgent by lazy {
-        FitnessCoachAgent(geminiService, database)
+        FitnessCoachAgent(context, geminiService, elevenLabsService, database)
     }
     
     // Gemini Service
     private val geminiService: GeminiService by lazy {
-        GeminiService()
+        GeminiService(httpClient)
     }
     
     // Voice Coaching Manager
@@ -100,7 +121,7 @@ class AppContainer(private val context: Context) {
     
     // Additional services for comprehensive app functionality
     val apiConnectionManager: APIConnectionManager by lazy {
-        APIConnectionManager(context, database)
+        APIConnectionManager(context)
     }
     
     val googleFitService: GoogleFitService by lazy {
@@ -108,10 +129,15 @@ class AppContainer(private val context: Context) {
     }
     
     val spotifyService: SpotifyService by lazy {
-        SpotifyService()
+        SpotifyService(context, httpClient)
     }
     
     val runSessionManager: RunSessionManager by lazy {
-        RunSessionManager(context, database, locationService, voiceCoachingManager)
+        RunSessionManager(context, locationService, database, voiceCoachingManager)
+    }
+
+    // Cleanup method for proper resource management
+    fun cleanup() {
+        httpClient.close()
     }
 }

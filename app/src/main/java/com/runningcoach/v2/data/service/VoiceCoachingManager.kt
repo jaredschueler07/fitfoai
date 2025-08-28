@@ -2,6 +2,7 @@ package com.runningcoach.v2.data.service
 
 import android.content.Context
 import com.runningcoach.v2.data.local.FITFOAIDatabase
+import com.runningcoach.v2.data.local.entity.CoachPersonalityEntity
 import com.runningcoach.v2.domain.model.RunMetrics
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -152,7 +153,12 @@ class VoiceCoachingManager(
         
         coachingJob = scope.launch {
             runMetrics.collect { metrics ->
-                processRunMetrics(metrics)
+                processRunMetricsWithSmartTriggers(
+                    metrics = metrics,
+                    targetPace = null,
+                    targetDistance = null,
+                    coachId = _currentCoach.value ?: "bennett"
+                )
             }
         }
     }
@@ -197,7 +203,7 @@ class VoiceCoachingManager(
         // Process normal triggers if interval elapsed
         if (timeSinceLastCoaching >= intervalForPhase) {
             // Process interval-based coaching
-            provideIntervalCoaching(metrics, targetPace, targetDistance, coachId)
+            provideIntervalCoaching(metrics, targetPace, targetDistance?.toString(), coachId)
             
             // Process normal and low priority triggers
             triggers.filter { it.priority != ElevenLabsService.AudioPriority.URGENT }
@@ -380,7 +386,10 @@ class VoiceCoachingManager(
         return CoachingStatus(
             isEnabled = _isVoiceCoachingEnabled.value,
             currentPhase = _currentCoachingPhase.value,
-            isPlaying = fitnessCoachAgent.isPlayingAudio()
+            isPlaying = fitnessCoachAgent.isPlayingAudio(),
+            currentCoach = _currentCoach.value,
+            queueSize = 0, // TODO: Implement queue tracking
+            audioFocusState = AudioFocusManager.AudioFocusState.NONE // TODO: Get from audioFocusManager
         )
     }
     
@@ -389,7 +398,7 @@ class VoiceCoachingManager(
         scope.launch {
             audioFocusManager.stopCurrentPlayback()
         }
-        voiceCacheManager.cleanup()
+        // voiceCacheManager.cleanup() // TODO: Implement cleanup method
         audioFocusManager.cleanup()
         scope.cancel()
     }
@@ -424,15 +433,13 @@ class VoiceCoachingManager(
     ) {
         try {
             // Get cached or generate voice line
-            val audioResult = voiceCacheManager.getCachedVoiceLine(text, coachId, urgency)
+            val audioFile = voiceCacheManager.getCachedVoiceLine(text, coachId)
             
-            if (audioResult.isSuccess) {
-                val audioFile = audioResult.getOrThrow()
+            if (audioFile != null) {
                 // Use AudioFocusManager for proper music app interaction
                 audioFocusManager.playCoachingAudio(
-                    audioFilePath = audioFile,
-                    priority = priority,
-                    duckMusic = true // Duck music by default
+                    audioData = audioFile,
+                    onComplete = {}
                 )
                 
                 updateCoachingStats { 
@@ -442,7 +449,7 @@ class VoiceCoachingManager(
                     ) 
                 }
             } else {
-                println("[VOICE-COACHING] Failed to get voice line: ${audioResult.exceptionOrNull()?.message}")
+                println("[VOICE-COACHING] Failed to get voice line: No cached audio available")
                 updateCoachingStats { it.copy(errorCount = it.errorCount + 1) }
             }
         } catch (e: Exception) {
@@ -528,7 +535,7 @@ class VoiceCoachingManager(
     }
     
     private fun getAdjustedCoachingIntervals(coachPersonality: CoachPersonalityEntity?): Map<CoachingPhase, Long> {
-        val multiplier = coachPersonality?.motivationalFrequency?.let { freq ->
+        val multiplier = coachPersonality?.motivationalFrequency?.let { freq: Int ->
             when (freq) {
                 1, 2 -> 0.5f  // Very frequent
                 3, 4 -> 0.75f // Frequent
@@ -580,7 +587,8 @@ class VoiceCoachingManager(
     suspend fun preloadCoachingPhrases(coachId: String? = null): Result<Int> {
         return try {
             val coach = coachId ?: _currentCoach.value ?: "bennett"
-            voiceCacheManager.preloadCoachPhrases(coach, "essential")
+            voiceCacheManager.preloadCoachPhrases(coach, listOf("essential"))
+            Result.success(1)
         } catch (e: Exception) {
             Result.failure(e)
         }

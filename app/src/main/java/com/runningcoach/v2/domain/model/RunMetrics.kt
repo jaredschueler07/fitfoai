@@ -7,8 +7,8 @@ package com.runningcoach.v2.domain.model
 data class RunMetrics(
     val distance: Float = 0f, // in meters
     val duration: Long = 0L, // in seconds (changed from milliseconds for consistency)
-    val averagePace: Float = 0f, // in minutes per kilometer
-    val currentPace: Float = 0f, // in minutes per kilometer
+    val averagePace: Float = 0f, // in minutes per kilometer (stored as metric, displayed as imperial)
+    val currentPace: Float = 0f, // in minutes per kilometer (stored as metric, displayed as imperial)
     val averageSpeed: Float = 0f, // in m/s
     val currentSpeed: Float = 0f, // in m/s
     val caloriesBurned: Int = 0,
@@ -24,9 +24,11 @@ data class RunMetrics(
     val lastLocationTimestamp: Long? = null // Timestamp of last GPS update
 ) {
     fun getFormattedDistance(): String {
+        // Convert meters to miles (1 meter = 0.000621371 miles)
+        val miles = distance * 0.000621371f
         return when {
-            distance < 1000 -> "${distance.toInt()}m"
-            else -> "${String.format("%.2f", distance / 1000)}km"
+            distance < 1609.34 -> "${String.format("%.2f", miles)} mi" // Less than 1 mile
+            else -> "${String.format("%.2f", miles)} mi"
         }
     }
     
@@ -43,20 +45,22 @@ data class RunMetrics(
     
     fun getFormattedPace(): String {
         return if (averagePace > 0) {
-            val minutes = averagePace.toInt()
-            val seconds = ((averagePace - minutes) * 60).toInt()
-            String.format("%d:%02d /km", minutes, seconds)
+            // Convert pace from min/km to min/mile (1 km = 0.621371 miles)
+            val pacePerMile = averagePace / 0.621371f
+            val minutes = pacePerMile.toInt()
+            val seconds = ((pacePerMile - minutes) * 60).toInt()
+            String.format("%d:%02d /mi", minutes, seconds)
         } else {
-            "--:-- /km"
+            "--:-- /mi"
         }
     }
     
     fun getFormattedSpeed(): String {
         return if (currentSpeed > 0) {
-            val kmh = currentSpeed * 3.6 // convert m/s to km/h
-            String.format("%.1f km/h", kmh)
+            val mph = currentSpeed * 2.237 // convert m/s to mph (1 m/s = 2.237 mph)
+            String.format("%.1f mph", mph)
         } else {
-            "0.0 km/h"
+            "0.0 mph"
         }
     }
     
@@ -85,10 +89,12 @@ data class RunMetrics(
     
     /**
      * Calculates pace from current speed
+     * Note: This still returns pace in min/km for internal consistency,
+     * but display formatting converts to min/mile
      */
     fun calculateCurrentPaceFromSpeed(): Float {
         return if (currentSpeed > 0) {
-            // Convert m/s to minutes per km
+            // Convert m/s to minutes per km (internal storage remains metric)
             (1000.0 / currentSpeed / 60.0).toFloat()
         } else {
             0f
@@ -100,11 +106,12 @@ data class RunMetrics(
      */
     fun getFormattedElevation(): String {
         return if (elevationGain > 0 || elevationLoss > 0) {
-            val gain = if (elevationGain > 0) "+${elevationGain.toInt()}m" else ""
-            val loss = if (elevationLoss > 0) "-${elevationLoss.toInt()}m" else ""
-            listOf(gain, loss).filter { it.isNotEmpty() }.joinToString(" ")
+            // Convert meters to feet (1 meter = 3.28084 feet)
+            val gainFt = if (elevationGain > 0) "+${(elevationGain * 3.28084f).toInt()}ft" else ""
+            val lossFt = if (elevationLoss > 0) "-${(elevationLoss * 3.28084f).toInt()}ft" else ""
+            listOf(gainFt, lossFt).filter { it.isNotEmpty() }.joinToString(" ")
         } else {
-            "0m"
+            "0ft"
         }
     }
     

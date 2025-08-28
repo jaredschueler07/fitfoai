@@ -88,11 +88,13 @@ class RunSessionManager(
         
         // Start voice coaching if enabled
         if (enableVoiceCoaching) {
-            voiceCoachingManager?.startVoiceCoaching(
-                currentMetrics,
-                targetPace,
-                targetDistance
-            )
+            scope.launch {
+                voiceCoachingManager?.startVoiceCoaching(
+                    currentMetrics,
+                    targetPace,
+                    targetDistance
+                )
+            }
         }
         
         return true

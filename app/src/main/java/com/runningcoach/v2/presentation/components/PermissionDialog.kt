@@ -341,7 +341,7 @@ fun BatteryOptimizationDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.BatteryFull,
+                            imageVector = Icons.Default.Settings,
                             contentDescription = null,
                             tint = AppColors.Success,
                             modifier = Modifier.size(36.dp)

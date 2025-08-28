@@ -65,8 +65,8 @@ fun ProgressScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         ProgressItem(
-                            value = "12.5",
-                            unit = "km",
+                            value = "7.8",
+                            unit = "mi",
                             label = "Distance"
                         )
                         ProgressItem(
@@ -101,9 +101,9 @@ fun ProgressScreen(
                     
                     GoalProgressItem(
                         title = "Distance Goal",
-                        current = 45.2f,
-                        target = 60f,
-                        unit = "km"
+                        current = 28.1f,
+                        target = 37.3f,
+                        unit = "mi"
                     )
                     
                     Spacer(modifier = Modifier.height(12.dp))
@@ -151,7 +151,7 @@ fun ProgressScreen(
                     
                     AchievementItem(
                         title = "Distance Milestone",
-                        description = "Reached 100km total",
+                        description = "Reached 62 miles total",
                         date = "1 week ago"
                     )
                 }

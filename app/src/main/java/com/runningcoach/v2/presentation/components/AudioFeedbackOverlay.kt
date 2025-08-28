@@ -178,7 +178,7 @@ private fun CurrentCoachingMessageCard(
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.History,
+                            imageVector = Icons.Default.ArrowBack,
                             contentDescription = "View History",
                             tint = Color.White.copy(alpha = 0.7f),
                             modifier = Modifier.size(18.dp)
@@ -291,7 +291,7 @@ private fun CoachingHistoryContent(
             Spacer(modifier = Modifier.height(20.dp))
             
             // Message type filter chips (optional enhancement)
-            LazyRow(
+            androidx.compose.foundation.lazy.LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
@@ -412,7 +412,7 @@ private fun HistoryMessageCard(
                             horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.VolumeDown,
+                                imageVector = Icons.Default.Close,
                                 contentDescription = "Audio Ducked",
                                 tint = AppColors.Warning,
                                 modifier = Modifier.size(12.dp)
@@ -452,7 +452,7 @@ private fun EmptyHistoryPlaceholder(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            imageVector = Icons.Default.HistoryEdu,
+            imageVector = Icons.Default.Info,
             contentDescription = "No Messages",
             tint = Color.White.copy(alpha = 0.3f),
             modifier = Modifier.size(64.dp)
@@ -519,7 +519,7 @@ private fun VoiceSpeakingIndicator(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Default.GraphicEq,
+            imageVector = Icons.Default.Settings,
             contentDescription = "Voice Active",
             tint = Color.White,
             modifier = Modifier.size(20.dp)
@@ -544,7 +544,7 @@ private fun AudioDuckedIndicator(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.VolumeDown,
+                imageVector = Icons.Default.Close,
                 contentDescription = "Audio Ducked",
                 tint = AppColors.Warning,
                 modifier = Modifier.size(14.dp)

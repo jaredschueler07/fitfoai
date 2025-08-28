@@ -458,7 +458,7 @@ private fun VolumeControlSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.VolumeDown,
+                imageVector = Icons.Default.Close,
                 contentDescription = "Volume Down",
                 tint = Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.size(20.dp)
@@ -476,7 +476,7 @@ private fun VolumeControlSection(
             )
             
             Icon(
-                imageVector = Icons.Default.VolumeUp,
+                imageVector = Icons.Default.Close,
                 contentDescription = "Volume Up",
                 tint = Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.size(20.dp)
@@ -573,15 +573,15 @@ private fun VoiceActiveIndicator(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Default.GraphicEq,
+            imageVector = Icons.Default.Settings,
             contentDescription = "Voice Active",
             tint = color,
             modifier = Modifier
                 .size(24.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                }
+                // .graphicsLayer {
+                //     scaleX = scale
+                //     scaleY = scale
+                // }
         )
     }
 }

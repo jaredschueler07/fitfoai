@@ -107,13 +107,13 @@ fun RunTrackingScreen(
                 ) {
                     // Distance (main metric) with coral accent
                     Text(
-                        text = uiState.formattedDistance.split("km")[0].split("m")[0],
+                        text = uiState.formattedDistance.split(" ")[0],
                         style = MaterialTheme.typography.displayLarge.copy(fontSize = 56.sp),
                         color = AppColors.CoralAccent,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (uiState.formattedDistance.contains("km")) "kilometers" else "meters",
+                        text = "miles",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -132,12 +132,13 @@ fun RunTrackingScreen(
                         )
                         MetricCard(
                             value = if (uiState.currentMetrics.currentPace > 0) {
-                                val pace = uiState.currentMetrics.currentPace
-                                val minutes = pace.toInt()
-                                val seconds = ((pace - minutes) * 60).toInt()
+                                // Convert pace from min/km to min/mile for display
+                                val pacePerMile = uiState.currentMetrics.currentPace / 0.621371f
+                                val minutes = pacePerMile.toInt()
+                                val seconds = ((pacePerMile - minutes) * 60).toInt()
                                 "$minutes:${seconds.toString().padStart(2, '0')}"
                             } else "--:--",
-                            label = "Current Pace",
+                            label = "Pace (min/mi)",
                             icon = Icons.Default.Add
                         )
                     }
