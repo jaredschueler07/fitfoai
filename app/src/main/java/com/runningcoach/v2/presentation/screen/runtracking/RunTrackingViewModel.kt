@@ -12,10 +12,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
-
 /**
  * ViewModel for RunTrackingScreen with real-time GPS tracking and metrics.
  * Integrates with backend LocationService and tracking use cases.
+ * [TECH-DEBT] Convert to Hilt injection once compatibility is resolved.
  */
 class RunTrackingViewModel(
     private val startRunSessionUseCase: StartRunSessionUseCase,

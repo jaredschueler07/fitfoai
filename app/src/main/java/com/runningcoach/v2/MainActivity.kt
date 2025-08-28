@@ -26,18 +26,14 @@ import com.runningcoach.v2.presentation.screen.welcome.WelcomeScreen
 import com.runningcoach.v2.presentation.screen.runtracking.RunTrackingScreen
 import com.runningcoach.v2.presentation.screen.runtracking.RunTrackingViewModel
 import com.runningcoach.v2.presentation.screen.progress.ProgressScreen
-import com.runningcoach.v2.domain.usecase.StartRunSessionUseCase
-import com.runningcoach.v2.domain.usecase.TrackRunSessionUseCase
-import com.runningcoach.v2.domain.usecase.EndRunSessionUseCase
-import com.runningcoach.v2.data.repository.MockRunSessionRepository
 import com.runningcoach.v2.presentation.screen.apitesting.APITestingScreen
 import com.runningcoach.v2.presentation.theme.RunningCoachTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-// import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.ui.platform.LocalContext
 
-// @AndroidEntryPoint - Temporarily disabled
+// @AndroidEntryPoint - Temporarily disabled due to Hilt KSP compatibility
 class MainActivity : ComponentActivity() {
     
     private var apiConnectionManager: com.runningcoach.v2.data.service.APIConnectionManager? = null
@@ -219,15 +215,13 @@ fun RunningCoachApp() {
             
             // Run Tracking Screen
             composable(Screen.RunTracking.route) {
-                // Create temporary mock repository and use cases (since Hilt is disabled)
-                val repository = MockRunSessionRepository()
-                val startRunSessionUseCase = StartRunSessionUseCase(repository)
-                val trackRunSessionUseCase = TrackRunSessionUseCase(repository)
-                val endRunSessionUseCase = EndRunSessionUseCase(repository)
+                // Get dependencies from application-level container
+                val context = LocalContext.current
+                val app = context.applicationContext as RunningCoachApplication
                 val viewModel = RunTrackingViewModel(
-                    startRunSessionUseCase,
-                    trackRunSessionUseCase,
-                    endRunSessionUseCase
+                    app.appContainer.startRunSessionUseCase,
+                    app.appContainer.trackRunSessionUseCase,
+                    app.appContainer.endRunSessionUseCase
                 )
                 
                 RunTrackingScreen(

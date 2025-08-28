@@ -5,9 +5,10 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    // Temporarily disable Hilt until we fix compatibility
+    // Temporary: Keep Hilt disabled due to KSP compatibility issue
+    // Will re-enable once compatibility is fixed
     // alias(libs.plugins.hilt)
-    // alias(libs.plugins.ksp)
+    alias(libs.plugins.ksp)
 }
 
 // Load API keys from local.properties
@@ -39,10 +40,10 @@ android {
         buildConfigField("String", "SPOTIFY_REDIRECT_URI", "\"${localProperties.getProperty("SPOTIFY_REDIRECT_URI", "")}\"")
         buildConfigField("String", "GOOGLE_FIT_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_FIT_CLIENT_ID", "")}\"")
         
-        // Room database schema export - Disabled with KSP
-        // ksp {
-        //     arg("room.schemaLocation", "$projectDir/schemas")
-        // }
+        // Room database schema export
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
     }
 
     buildTypes {
@@ -72,6 +73,10 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+    
+    // ViewModel and Lifecycle
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.2")
 
     // Compose BOM and UI
     implementation(platform(libs.androidx.compose.bom))
@@ -85,15 +90,15 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
-    // Hilt Dependency Injection - Temporarily disabled
+    // Hilt Dependency Injection - Temporarily disabled due to KSP compatibility
     // implementation(libs.hilt.android)
     // implementation(libs.hilt.navigation.compose)
     // ksp(libs.hilt.compiler)
 
-    // Room Database - Temporarily using kapt instead of ksp
+    // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    // ksp(libs.room.compiler)
+    ksp(libs.room.compiler)
 
     // Ktor HTTP Client
     implementation(libs.ktor.client.core)
