@@ -118,6 +118,7 @@ dependencies {
     // Google APIs
     implementation(libs.google.ai.client)
     implementation(libs.google.maps)
+    implementation(libs.google.maps.compose)
     implementation(libs.google.play.services.auth)
     implementation(libs.google.play.services.fitness)
     implementation(libs.google.play.services.location)

@@ -193,6 +193,7 @@ class RunTrackingViewModel(
         _uiState.value = _uiState.value.copy(
             currentMetrics = trackingData.metrics,
             locationPointCount = trackingData.routePointCount,
+            locationHistory = trackingData.locationHistory,
             gpsStatus = gpsStatus,
             lastLocationUpdate = System.currentTimeMillis()
         )
@@ -211,6 +212,7 @@ data class RunTrackingUiState(
     val hasLocationPermission: Boolean = false,
     val permissionRequested: Boolean = false,
     val locationPointCount: Int = 0,
+    val locationHistory: List<com.runningcoach.v2.domain.model.LocationData> = emptyList(),
     val lastLocationUpdate: Long = 0L,
     val sessionCompleted: Boolean = false,
     val error: String? = null

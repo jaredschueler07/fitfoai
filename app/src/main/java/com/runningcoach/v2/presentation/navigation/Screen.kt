@@ -17,22 +17,22 @@ sealed class Screen(val route: String) {
     companion object {
         fun getBottomNavItems() = listOf(
             BottomNavItem(
-                route = "dashboard",
+                route = Dashboard.route,
                 label = "Home",
                 icon = "home"
             ),
             BottomNavItem(
-                route = "ai_coach",
+                route = AICoach.route,
                 label = "AI Coach", 
                 icon = "chat"
             ),
             BottomNavItem(
-                route = "progress",
+                route = Progress.route,
                 label = "Progress",
                 icon = "chart"
             ),
             BottomNavItem(
-                route = "profile",
+                route = Profile.route,
                 label = "Profile",
                 icon = "profile"
             )

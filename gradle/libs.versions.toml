@@ -34,6 +34,7 @@ gson = "2.10.1"
 # Google APIs
 geminiAi = "0.7.0"
 googleMaps = "18.2.0"
+googleMapsCompose = "4.4.1"
 playServicesAuth = "21.0.0"
 playServicesFitness = "21.1.0"
 playServicesLocation = "21.0.1"
@@ -88,6 +89,7 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 # Google APIs
 google-ai-client = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "geminiAi" }
 google-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "googleMaps" }
+google-maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "googleMapsCompose" }
 google-play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 google-play-services-fitness = { group = "com.google.android.gms", name = "play-services-fitness", version.ref = "playServicesFitness" }
 google-play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }

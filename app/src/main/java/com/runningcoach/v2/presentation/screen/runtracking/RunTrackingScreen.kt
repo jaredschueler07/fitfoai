@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runningcoach.v2.presentation.components.AppCard
 import com.runningcoach.v2.presentation.components.icons.*
+import com.runningcoach.v2.presentation.components.maps.RunTrackingMap
+import com.google.android.gms.maps.model.LatLng
 
 @Composable
 fun RunTrackingScreen(
@@ -203,6 +205,27 @@ fun RunTrackingScreen(
                         }
                     }
                 }
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            // Map View for Route Tracking
+            if (uiState.trackingState != TrackingState.INACTIVE) {
+                // Convert location history to LatLng points
+                val routePoints = uiState.locationHistory.map { locationData ->
+                    LatLng(locationData.latitude, locationData.longitude)
+                }
+                
+                val currentLocation = uiState.currentMetrics.currentLocation?.let { location ->
+                    LatLng(location.latitude, location.longitude)
+                }
+                
+                RunTrackingMap(
+                    currentLocation = currentLocation,
+                    routePoints = routePoints,
+                    runMetrics = uiState.currentMetrics,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
             
             Spacer(modifier = Modifier.weight(1f))
