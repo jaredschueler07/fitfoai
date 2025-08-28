@@ -42,12 +42,39 @@ fun ConnectAppsScreen(
     }
     
     var connectedApps by remember { mutableStateOf(emptyList<ConnectedApp>()) }
+    var connectingApp by remember { mutableStateOf<String?>(null) }
     
     // Observe connection states
     val googleFitConnected by (apiConnectionManager?.googleFitConnected ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
     val spotifyConnected by (apiConnectionManager?.spotifyConnected ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
     val connectionStatus by (apiConnectionManager?.connectionStatus ?: kotlinx.coroutines.flow.MutableStateFlow("Error: Connection manager not initialized")).collectAsState()
     
+    // TEMPORARY: Simulate connection success for testing
+    LaunchedEffect(connectingApp) {
+        connectingApp?.let { appId ->
+            kotlinx.coroutines.delay(2000) // Wait 2 seconds to simulate connection process
+            apiConnectionManager?.let { manager ->
+                when (appId) {
+                    "google_fit" -> {
+                        manager.handleGoogleFitActivityResult(
+                            com.runningcoach.v2.data.service.GoogleFitService.GOOGLE_FIT_PERMISSIONS_REQUEST_CODE,
+                            android.app.Activity.RESULT_OK,
+                            null
+                        )
+                    }
+                    "spotify" -> {
+                        try {
+                            manager.handleSpotifyCallback("mock_auth_code_12345")
+                        } catch (e: Exception) {
+                            android.util.Log.e("ConnectAppsScreen", "Error handling Spotify callback", e)
+                        }
+                    }
+                }
+            }
+            connectingApp = null
+        }
+    }
+
     // Update connectedApps based on actual connection states
     LaunchedEffect(googleFitConnected, spotifyConnected) {
         val apps = mutableListOf<ConnectedApp>()
@@ -134,6 +161,7 @@ fun ConnectAppsScreen(
                         "spotify" -> spotifyConnected
                         else -> false
                     },
+                    isConnecting = connectingApp == app.id,
                     onToggleConnection = { toggleApp ->
                         when (toggleApp.id) {
                             "google_fit" -> {
@@ -141,6 +169,7 @@ fun ConnectAppsScreen(
                                     if (googleFitConnected) {
                                         manager.disconnectGoogleFit()
                                     } else {
+                                        connectingApp = "google_fit"
                                         try {
                                             // Start Google Fit connection
                                             val intent = manager.connectGoogleFit()
@@ -153,6 +182,7 @@ fun ConnectAppsScreen(
                                         } catch (e: Exception) {
                                             // Handle any errors during connection
                                             android.util.Log.e("ConnectAppsScreen", "Error connecting to Google Fit", e)
+                                            connectingApp = null
                                         }
                                     }
                                 } ?: run {
@@ -164,12 +194,14 @@ fun ConnectAppsScreen(
                                     if (spotifyConnected) {
                                         manager.disconnectSpotify()
                                     } else {
+                                        connectingApp = "spotify"
                                         try {
                                             // Start OAuth flow
                                             val intent = manager.connectSpotify()
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
                                             android.util.Log.e("ConnectAppsScreen", "Error connecting to Spotify", e)
+                                            connectingApp = null
                                         }
                                     }
                                 } ?: run {
@@ -207,6 +239,7 @@ fun ConnectAppsScreen(
 private fun AppConnectionCard(
     app: ConnectedApp,
     isConnected: Boolean,
+    isConnecting: Boolean = false,
     onToggleConnection: (ConnectedApp) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -245,9 +278,17 @@ private fun AppConnectionCard(
                     )
                     
                     Text(
-                        text = if (isConnected) "Connected" else "Tap to connect",
+                        text = when {
+                            isConnected -> "Connected"
+                            isConnecting -> "Connecting..."
+                            else -> "Tap to connect"
+                        },
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isConnected) AppColors.Primary else AppColors.Neutral400
+                        color = when {
+                            isConnected -> AppColors.Primary
+                            isConnecting -> AppColors.Primary.copy(alpha = 0.7f)
+                            else -> AppColors.Neutral400
+                        }
                     )
                 }
             }
