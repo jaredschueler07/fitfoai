@@ -2,7 +2,9 @@ package com.runningcoach.v2.data.repository
 
 import com.runningcoach.v2.data.local.dao.RunSessionDao
 import com.runningcoach.v2.data.local.entity.RunSessionEntity
+import com.runningcoach.v2.data.service.BackgroundLocationService
 import com.runningcoach.v2.data.service.LocationService
+import com.runningcoach.v2.data.service.SessionRecoveryManager
 import com.runningcoach.v2.domain.model.LocationData
 import com.runningcoach.v2.domain.model.RunMetrics
 import com.runningcoach.v2.domain.repository.RunSession
@@ -16,10 +18,12 @@ import kotlin.coroutines.CoroutineContext
 /**
  * Implementation of RunSessionRepository following Clean Architecture principles.
  * Manages run session data persistence and real-time metrics updates using Room database and Flow.
+ * Enhanced with crash recovery and background service integration.
  */
 class RunSessionRepositoryImpl(
     private val runSessionDao: RunSessionDao,
     private val locationService: LocationService,
+    private val sessionRecoveryManager: SessionRecoveryManager,
     private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 ) : RunSessionRepository {
 
@@ -30,9 +34,21 @@ class RunSessionRepositoryImpl(
     // JSON serializer for location data
     private val gson = Gson()
     private val locationListType = object : TypeToken<List<LocationData>>() {}.type
+    
+    // Crash recovery state
+    private val _isRecovering = MutableStateFlow(false)
+    val isRecovering: StateFlow<Boolean> = _isRecovering.asStateFlow()
 
     override suspend fun startRunSession(userId: Long): Result<Long> {
         return try {
+            // Check for crash recovery first
+            if (sessionRecoveryManager.hasRecoverableSession()) {
+                val recoveryResult = attemptSessionRecovery()
+                if (recoveryResult.isSuccess) {
+                    return recoveryResult
+                }
+            }
+            
             val currentTime = System.currentTimeMillis()
             val sessionEntity = RunSessionEntity(
                 userId = userId,
@@ -51,6 +67,9 @@ class RunSessionRepositoryImpl(
             val currentHistory = _locationHistory.value.toMutableMap()
             currentHistory[sessionId] = emptyList()
             _locationHistory.value = currentHistory
+            
+            // Save session for crash recovery
+            sessionRecoveryManager.saveActiveSession(sessionId, userId)
             
             Result.success(sessionId)
         } catch (e: Exception) {
@@ -92,6 +111,9 @@ class RunSessionRepositoryImpl(
             currentHistory.remove(sessionId)
             _locationHistory.value = currentHistory
             
+            // Clear crash recovery data
+            sessionRecoveryManager.clearActiveSession()
+            
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -100,9 +122,13 @@ class RunSessionRepositoryImpl(
 
     override suspend fun updateRunMetrics(sessionId: Long, runMetrics: RunMetrics): Result<Unit> {
         return try {
+            val updatedMetrics = runMetrics.copy(lastUpdateTime = System.currentTimeMillis())
             val currentMetrics = _activeMetrics.value.toMutableMap()
-            currentMetrics[sessionId] = runMetrics.copy(lastUpdateTime = System.currentTimeMillis())
+            currentMetrics[sessionId] = updatedMetrics
             _activeMetrics.value = currentMetrics
+            
+            // Save to recovery manager periodically
+            sessionRecoveryManager.saveMetrics(sessionId, updatedMetrics)
             
             Result.success(Unit)
         } catch (e: Exception) {
@@ -128,6 +154,12 @@ class RunSessionRepositoryImpl(
                     elevationGain = locationService.calculateElevationGain(currentHistory[sessionId] ?: emptyList())
                 )
                 updateRunMetrics(sessionId, updatedMetrics)
+            }
+            
+            // Save location history to recovery manager periodically (every 5 points)
+            val newHistory = currentHistory[sessionId] ?: emptyList()
+            if (newHistory.size % 5 == 0) {
+                sessionRecoveryManager.saveLocationHistory(sessionId, newHistory)
             }
             
             Result.success(Unit)
@@ -267,5 +299,161 @@ class RunSessionRepositoryImpl(
      */
     fun stopGPSTracking() {
         locationService.stopLocationTracking()
+    }
+    
+    /**
+     * Attempt to recover session from crash
+     */
+    private suspend fun attemptSessionRecovery(): Result<Long> {
+        return try {
+            _isRecovering.value = true
+            
+            val recoveryData = sessionRecoveryManager.getRecoveryData()
+                ?: return Result.failure(Exception("No recovery data available"))
+            
+            val (sessionId, userId, locationHistory, savedMetrics) = recoveryData
+            
+            // Verify session exists in database
+            val existingSession = runSessionDao.getRunSessionById(sessionId)
+            if (existingSession == null) {
+                // Session doesn't exist, clear recovery data
+                sessionRecoveryManager.clearActiveSession()
+                return Result.failure(Exception("Session not found in database"))
+            }
+            
+            // Restore location history
+            val currentHistory = _locationHistory.value.toMutableMap()
+            currentHistory[sessionId] = locationHistory
+            _locationHistory.value = currentHistory
+            
+            // Restore location service history
+            locationService.restoreLocationHistory(locationHistory)
+            
+            // Restore metrics
+            val currentMetrics = _activeMetrics.value.toMutableMap()
+            val metrics = savedMetrics ?: RunMetrics(startTime = existingSession.startTime)
+            currentMetrics[sessionId] = metrics
+            _activeMetrics.value = currentMetrics
+            
+            _isRecovering.value = false
+            Result.success(sessionId)
+            
+        } catch (e: Exception) {
+            _isRecovering.value = false
+            sessionRecoveryManager.saveErrorState(-1, "Recovery failed: ${e.message}")
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Check for and handle session recovery on repository initialization
+     */
+    suspend fun initializeWithRecovery(): Result<Long?> {
+        return try {
+            if (sessionRecoveryManager.hasRecoverableSession()) {
+                val recoveryResult = attemptSessionRecovery()
+                if (recoveryResult.isSuccess) {
+                    Result.success(recoveryResult.getOrNull())
+                } else {
+                    // Recovery failed, clean up
+                    sessionRecoveryManager.forceCleanup()
+                    Result.success(null)
+                }
+            } else {
+                Result.success(null)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Force clean up recovery data (for manual intervention)
+     */
+    fun forceCleanupRecovery() {
+        sessionRecoveryManager.forceCleanup()
+        _isRecovering.value = false
+    }
+    
+    /**
+     * Get recovery diagnostics for debugging
+     */
+    fun getRecoveryDiagnostics(): Map<String, Any> {
+        val diagnostics = sessionRecoveryManager.getDiagnostics().toMutableMap()
+        diagnostics["repositoryState"] = mapOf(
+            "activeMetricsCount" to _activeMetrics.value.size,
+            "locationHistoryCount" to _locationHistory.value.size,
+            "isRecovering" to _isRecovering.value
+        )
+        return diagnostics
+    }
+    
+    /**
+     * Background service integration - start session with background location service
+     */
+    suspend fun startSessionWithBackgroundService(
+        userId: Long,
+        context: android.content.Context
+    ): Result<Long> {
+        val startResult = startRunSession(userId)
+        
+        if (startResult.isSuccess) {
+            val sessionId = startResult.getOrNull()!!
+            
+            // Start background location service
+            BackgroundLocationService.startService(context, sessionId, userId)
+            
+            return Result.success(sessionId)
+        }
+        
+        return startResult
+    }
+    
+    /**
+     * Background service integration - stop session and service
+     */
+    suspend fun endSessionWithBackgroundService(
+        sessionId: Long,
+        runMetrics: RunMetrics,
+        context: android.content.Context
+    ): Result<Unit> {
+        val endResult = endRunSession(sessionId, runMetrics)
+        
+        // Stop background service regardless of end result
+        BackgroundLocationService.stopService(context)
+        
+        return endResult
+    }
+    
+    /**
+     * Enhanced GPS tracking with crash recovery for background service
+     */
+    fun startCrashResistantGPSTracking(sessionId: Long): Flow<RunMetrics> {
+        return flow {
+            try {
+                // Enable service-optimized tracking
+                locationService.startServiceOptimizedTracking()
+                
+                locationService.getServiceOptimizedLocationUpdates()
+                    .collect { locationData ->
+                        // Add location with crash recovery
+                        addLocationData(sessionId, locationData)
+                        
+                        val currentMetrics = _activeMetrics.value[sessionId]
+                        if (currentMetrics != null) {
+                            emit(currentMetrics)
+                        }
+                    }
+            } catch (e: Exception) {
+                // Save error state for recovery
+                sessionRecoveryManager.saveErrorState(sessionId, "GPS tracking error: ${e.message}")
+                throw e
+            }
+        }.flowOn(Dispatchers.IO)
+            .retry(3) { exception ->
+                // Retry GPS tracking up to 3 times with delay
+                kotlinx.coroutines.delay(5000)
+                true
+            }
     }
 }

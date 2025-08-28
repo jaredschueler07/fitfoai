@@ -40,6 +40,9 @@ android {
         buildConfigField("String", "SPOTIFY_REDIRECT_URI", "\"${localProperties.getProperty("SPOTIFY_REDIRECT_URI", "")}\"")
         buildConfigField("String", "GOOGLE_FIT_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_FIT_CLIENT_ID", "")}\"")
         
+        // Add Google Maps API key to string resources
+        resValue("string", "google_maps_api_key", localProperties.getProperty("GOOGLE_MAPS_API_KEY", ""))
+        
         // Room database schema export
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
@@ -47,12 +50,23 @@ android {
     }
 
     buildTypes {
-        release {
+        debug {
             isMinifyEnabled = false
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+        }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Performance optimizations for release builds
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
         }
     }
     compileOptions {
@@ -111,6 +125,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+
     // Serialization
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.gson)
@@ -123,6 +140,15 @@ dependencies {
     implementation(libs.google.play.services.fitness)
     implementation(libs.google.play.services.location)
     implementation(libs.google.play.services.auth.api.phone)
+    
+    // Audio & Media for Voice Coaching
+    implementation("androidx.media:media:1.7.0")
+    implementation("androidx.media3:media3-exoplayer:1.2.0")
+    implementation("androidx.media3:media3-ui:1.2.0")
+    implementation("androidx.media3:media3-common:1.2.0")
+    
+    // HTTP Client for ElevenLabs API (using existing Ktor)
+    // ElevenLabs API integration handled via existing Ktor client
 
     // Testing
     testImplementation(libs.junit)

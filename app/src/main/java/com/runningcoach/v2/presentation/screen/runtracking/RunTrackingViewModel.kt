@@ -7,20 +7,21 @@ import com.runningcoach.v2.domain.usecase.StartRunSessionUseCase
 import com.runningcoach.v2.domain.usecase.TrackRunSessionUseCase
 import com.runningcoach.v2.domain.usecase.EndRunSessionUseCase
 import com.runningcoach.v2.domain.usecase.TrackingData
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
+import com.runningcoach.v2.data.service.VoiceCoachingManager
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 /**
- * ViewModel for RunTrackingScreen with real-time GPS tracking and metrics.
- * Integrates with backend LocationService and tracking use cases.
+ * [BACKEND-UPDATE] Enhanced RunTrackingViewModel with Voice Coaching Integration
+ * 
+ * Integrates with complete voice coaching system including SmartTriggerEngine,
+ * VoiceCacheManager, and AudioFocusManager for intelligent real-time coaching.
  * [TECH-DEBT] Convert to Hilt injection once compatibility is resolved.
  */
 class RunTrackingViewModel(
     private val startRunSessionUseCase: StartRunSessionUseCase,
     private val trackRunSessionUseCase: TrackRunSessionUseCase,
-    private val endRunSessionUseCase: EndRunSessionUseCase
+    private val endRunSessionUseCase: EndRunSessionUseCase,
+    private val voiceCoachingManager: VoiceCoachingManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RunTrackingUiState())
@@ -28,11 +29,39 @@ class RunTrackingViewModel(
 
     private var currentSessionId: Long? = null
     private val defaultUserId = 1L // TODO: Get from user session management
+    
+    // Voice coaching integration
+    val selectedCoach = voiceCoachingManager.observeSelectedCoach()
+    val coachingStats = voiceCoachingManager.coachingStats
+    val isVoiceCoachingEnabled = voiceCoachingManager.isVoiceCoachingEnabled
+    val currentCoachingPhase = voiceCoachingManager.currentCoachingPhase
+    
+    // Track metrics flow for voice coaching
+    private val metricsFlow = MutableSharedFlow<RunMetrics>()
+    
+    init {
+        // Start voice coaching when tracking begins
+        viewModelScope.launch {
+            combine(
+                uiState.map { it.isTracking },
+                metricsFlow
+            ) { isTracking, metrics ->
+                if (isTracking) metrics else null
+            }.collect { metrics ->
+                metrics?.let {
+                    // Voice coaching will process metrics in background
+                }
+            }
+        }
+    }
 
     /**
-     * Starts a new run session and begins GPS tracking
+     * Starts a new run session with voice coaching integration
      */
-    fun startRunSession() {
+    fun startRunSession(
+        targetPace: String? = null,
+        targetDistance: Float? = null // in meters
+    ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
@@ -48,10 +77,21 @@ class RunTrackingViewModel(
                         // Start tracking real-time metrics
                         trackRealTimeMetrics(sessionId)
                         
+                        // Start voice coaching with parameters
+                        voiceCoachingManager.startVoiceCoaching(
+                            runMetrics = metricsFlow.asSharedFlow(),
+                            targetPace = targetPace,
+                            targetDistance = targetDistance?.toString(),
+                            targetDistanceMeters = targetDistance
+                        )
+                        
                         _uiState.value = _uiState.value.copy(
                             isTracking = true,
                             isLoading = false,
-                            trackingState = TrackingState.ACTIVE
+                            trackingState = TrackingState.ACTIVE,
+                            voiceCoachingActive = true,
+                            targetPace = targetPace,
+                            targetDistance = targetDistance
                         )
                     }
                 } else {
@@ -70,32 +110,43 @@ class RunTrackingViewModel(
     }
 
     /**
-     * Pauses the current run session
+     * Pauses the current run session and voice coaching
      */
     fun pauseRunSession() {
-        _uiState.value = _uiState.value.copy(
-            isTracking = false,
-            trackingState = TrackingState.PAUSED
-        )
+        viewModelScope.launch {
+            voiceCoachingManager.pauseVoiceCoaching()
+            
+            _uiState.value = _uiState.value.copy(
+                isTracking = false,
+                trackingState = TrackingState.PAUSED
+            )
+        }
     }
 
     /**
-     * Resumes the paused run session
+     * Resumes the paused run session and voice coaching
      */
     fun resumeRunSession() {
-        _uiState.value = _uiState.value.copy(
-            isTracking = true,
-            trackingState = TrackingState.ACTIVE
-        )
+        viewModelScope.launch {
+            voiceCoachingManager.resumeVoiceCoaching(metricsFlow.asSharedFlow())
+            
+            _uiState.value = _uiState.value.copy(
+                isTracking = true,
+                trackingState = TrackingState.ACTIVE
+            )
+        }
     }
 
     /**
-     * Ends the current run session and saves final metrics
+     * Ends the current run session, stops voice coaching, and saves final metrics
      */
     fun endRunSession() {
         viewModelScope.launch {
             currentSessionId?.let { sessionId ->
                 try {
+                    // Stop voice coaching first (will provide completion message)
+                    voiceCoachingManager.stopVoiceCoaching()
+                    
                     val finalMetrics = _uiState.value.currentMetrics
                     val result = endRunSessionUseCase(sessionId, finalMetrics)
                     
@@ -103,7 +154,8 @@ class RunTrackingViewModel(
                         _uiState.value = _uiState.value.copy(
                             isTracking = false,
                             trackingState = TrackingState.COMPLETED,
-                            sessionCompleted = true
+                            sessionCompleted = true,
+                            voiceCoachingActive = false
                         )
                         currentSessionId = null
                     } else {
@@ -173,7 +225,7 @@ class RunTrackingViewModel(
     }
 
     /**
-     * Updates UI state with new tracking data
+     * Updates UI state with new tracking data and feeds metrics to voice coaching
      */
     private fun updateUIWithTrackingData(trackingData: TrackingData) {
         val gpsStatus = when {
@@ -197,11 +249,96 @@ class RunTrackingViewModel(
             gpsStatus = gpsStatus,
             lastLocationUpdate = System.currentTimeMillis()
         )
+        
+        // Feed metrics to voice coaching system
+        viewModelScope.launch {
+            metricsFlow.emit(trackingData.metrics)
+        }
+    }
+    
+    // Voice coaching control methods
+    
+    /**
+     * Toggle voice coaching on/off
+     */
+    fun toggleVoiceCoaching() {
+        val newState = !voiceCoachingManager.isVoiceCoachingEnabled.value
+        voiceCoachingManager.setVoiceCoachingEnabled(newState)
+        
+        _uiState.value = _uiState.value.copy(
+            voiceCoachingActive = newState && _uiState.value.isTracking
+        )
+    }
+    
+    /**
+     * Select a different coach personality
+     */
+    fun selectCoach(coachId: String) {
+        viewModelScope.launch {
+            val result = voiceCoachingManager.selectCoach(coachId)
+            if (result.isFailure) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to select coach: ${result.exceptionOrNull()?.message}"
+                )
+            }
+        }
+    }
+    
+    /**
+     * Test the selected coach voice
+     */
+    fun testCoachVoice(coachId: String) {
+        viewModelScope.launch {
+            voiceCoachingManager.testCoachVoice(coachId)
+        }
+    }
+    
+    /**
+     * Get audio focus status for UI display
+     */
+    fun getAudioFocusStatus() = voiceCoachingManager.getAudioFocusStatus()
+    
+    /**
+     * Get voice coaching cache statistics
+     */
+    suspend fun getCacheStats() = voiceCoachingManager.getCacheStats()
+    
+    /**
+     * Get smart trigger statistics
+     */
+    fun getTriggerStats() = voiceCoachingManager.getTriggerStats()
+    
+    /**
+     * Preload coaching phrases for better performance
+     */
+    fun preloadCoachingPhrases(coachId: String? = null) {
+        viewModelScope.launch {
+            voiceCoachingManager.preloadCoachingPhrases(coachId)
+        }
+    }
+    
+    /**
+     * Set target pace for coaching
+     */
+    fun setTargetPace(pace: String) {
+        _uiState.value = _uiState.value.copy(targetPace = pace)
+    }
+    
+    /**
+     * Set target distance for coaching
+     */
+    fun setTargetDistance(distance: Float) {
+        _uiState.value = _uiState.value.copy(targetDistance = distance)
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        voiceCoachingManager.cleanup()
     }
 }
 
 /**
- * UI state for RunTrackingScreen
+ * Enhanced UI state for RunTrackingScreen with voice coaching integration
  */
 data class RunTrackingUiState(
     val isTracking: Boolean = false,
@@ -215,7 +352,12 @@ data class RunTrackingUiState(
     val locationHistory: List<com.runningcoach.v2.domain.model.LocationData> = emptyList(),
     val lastLocationUpdate: Long = 0L,
     val sessionCompleted: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    
+    // Voice coaching state
+    val voiceCoachingActive: Boolean = false,
+    val targetPace: String? = null,
+    val targetDistance: Float? = null
 ) {
     val formattedDistance: String get() = currentMetrics.getFormattedDistance()
     val formattedDuration: String get() = currentMetrics.getFormattedDuration()

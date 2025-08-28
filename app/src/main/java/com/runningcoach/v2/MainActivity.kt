@@ -27,6 +27,8 @@ import com.runningcoach.v2.presentation.screen.runtracking.RunTrackingScreen
 import com.runningcoach.v2.presentation.screen.runtracking.RunTrackingViewModel
 import com.runningcoach.v2.presentation.screen.progress.ProgressScreen
 import com.runningcoach.v2.presentation.screen.apitesting.APITestingScreen
+import com.runningcoach.v2.presentation.screen.permissions.PermissionScreen
+import com.runningcoach.v2.presentation.screen.settings.SettingsScreen
 import com.runningcoach.v2.presentation.theme.RunningCoachTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -196,6 +198,12 @@ fun RunningCoachApp() {
                     userName = "Runner", // TODO: Get from user profile data
                     onStartRun = {
                         navController.navigate(Screen.RunTracking.route)
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route)
+                    },
+                    onNavigateToPermissions = {
+                        navController.navigate(Screen.Permissions.route)
                     }
                 )
             }
@@ -235,6 +243,36 @@ fun RunningCoachApp() {
             // API Testing Screen (for debugging)
             composable(Screen.APITesting.route) {
                 APITestingScreen()
+            }
+            
+            // Permission Flow Screen
+            composable(Screen.Permissions.route) {
+                PermissionScreen(
+                    onPermissionsGranted = {
+                        // Navigate back to the screen that requested permissions
+                        navController.popBackStack()
+                    },
+                    onLocationPermissionRequested = {
+                        // In a real app, this would trigger the permission system dialog
+                        // For now, we'll simulate permission granted
+                    },
+                    onBackgroundPermissionRequested = {
+                        // In a real app, this would trigger the background permission dialog
+                        // For now, we'll simulate permission granted
+                    },
+                    hasLocationPermission = false, // TODO: Integrate with actual permission manager
+                    hasBackgroundPermission = false,
+                    canRequestBackgroundPermission = false
+                )
+            }
+            
+            // Settings Screen
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
             }
         }
     }

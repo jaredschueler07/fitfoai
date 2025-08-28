@@ -25,6 +25,8 @@ import com.runningcoach.v2.presentation.theme.AppColors
 fun DashboardScreen(
     userName: String = "Runner",
     onStartRun: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToPermissions: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current

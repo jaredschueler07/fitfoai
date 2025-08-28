@@ -1,5 +1,7 @@
 package com.runningcoach.v2.presentation.screen.runtracking
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -22,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runningcoach.v2.presentation.components.AppCard
 import com.runningcoach.v2.presentation.components.icons.*
 import com.runningcoach.v2.presentation.components.maps.RunTrackingMap
+// import com.runningcoach.v2.presentation.components.PermissionDialog
 import com.google.android.gms.maps.model.LatLng
 
 @Composable
@@ -161,7 +164,7 @@ fun RunTrackingScreen(
             
             Spacer(modifier = Modifier.height(20.dp))
             
-            // GPS Status Card with Athletic Styling
+            // GPS Status Card with Athletic Styling and Background Tracking
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -169,39 +172,174 @@ fun RunTrackingScreen(
                     containerColor = AppColors.Surface.copy(alpha = 0.8f)
                 )
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(16.dp)
                 ) {
-                    val gpsColor = when (uiState.gpsStatus) {
-                        GPSStatus.EXCELLENT -> AppColors.GPSExcellent
-                        GPSStatus.GOOD -> AppColors.GPSGood
-                        GPSStatus.FAIR -> AppColors.GPSFair
-                        GPSStatus.POOR -> AppColors.GPSPoor
-                        GPSStatus.SIGNAL_LOST -> AppColors.Error
-                        else -> AppColors.GPSInactive
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val gpsColor = when (uiState.gpsStatus) {
+                                GPSStatus.EXCELLENT -> AppColors.GPSExcellent
+                                GPSStatus.GOOD -> AppColors.GPSGood
+                                GPSStatus.FAIR -> AppColors.GPSFair
+                                GPSStatus.POOR -> AppColors.GPSPoor
+                                GPSStatus.SIGNAL_LOST -> AppColors.Error
+                                else -> AppColors.GPSInactive
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape)
+                                    .background(gpsColor)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "GPS: ${uiState.gpsStatus.name.replace("_", " ")}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                if (uiState.locationPointCount > 0) {
+                                    Text(
+                                        text = "${uiState.locationPointCount} points tracked",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Background tracking indicator - temporarily disabled
+                        // if (uiState.trackingState != TrackingState.INACTIVE) {
+                        //     BackgroundTrackingIndicator(
+                        //         isBackgroundServiceActive = uiState.isBackgroundServiceActive ?: false
+                        //     )
+                        // }
                     }
                     
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(gpsColor)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "GPS: ${uiState.gpsStatus.name.replace("_", " ")}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium
-                        )
-                        if (uiState.locationPointCount > 0) {
-                            Text(
-                                text = "${uiState.locationPointCount} points tracked",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f)
+                    // Service status if active - temporarily disabled
+                    val isBackgroundServiceActive = false // TODO: Connect to real state
+                    if (isBackgroundServiceActive) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Background Active",
+                                tint = AppColors.Success,
+                                modifier = Modifier.size(16.dp)
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Background tracking active",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.Success,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                    
+                    // Battery optimization warning if needed - temporarily disabled
+                    val showBatteryOptimizationWarning = false // TODO: Connect to real state
+                    if (showBatteryOptimizationWarning) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = AppColors.Warning.copy(alpha = 0.15f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = "Battery Warning",
+                                    tint = AppColors.Warning,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Battery optimization may affect tracking",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "Tap to optimize settings",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(alpha = 0.8f)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.ArrowForward,
+                                    contentDescription = "Optimize",
+                                    tint = AppColors.Warning,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Session recovery notification - temporarily disabled
+                    val hasRecoverableSession = false // TODO: Connect to real state
+                    if (hasRecoverableSession) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = AppColors.Info.copy(alpha = 0.15f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Recovery Available",
+                                    tint = AppColors.Info,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Previous session found",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "Tap to recover your workout",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(alpha = 0.8f)
+                                    )
+                                }
+                                TextButton(
+                                    onClick = { /* Handle session recovery */ },
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = AppColors.CoralAccent
+                                    )
+                                ) {
+                                    Text(
+                                        text = "Recover",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -400,6 +538,53 @@ private fun CircularActionButton(
             style = MaterialTheme.typography.labelSmall,
             color = Color.White,
             fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun BackgroundTrackingIndicator(
+    isBackgroundServiceActive: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "backgroundPulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = EaseInOut),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alphaPulse"
+    )
+    
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isBackgroundServiceActive) {
+                        AppColors.Success.copy(alpha = alpha)
+                    } else {
+                        AppColors.Neutral500
+                    }
+                )
+        )
+        
+        Text(
+            text = if (isBackgroundServiceActive) "BG" else "FG",
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isBackgroundServiceActive) {
+                AppColors.Success.copy(alpha = alpha)
+            } else {
+                AppColors.Neutral500
+            },
+            fontWeight = FontWeight.Bold
         )
     }
 }

@@ -16,6 +16,7 @@ import kotlin.coroutines.resume
 /**
  * Location service using Google Play Services FusedLocationProvider for high-accuracy GPS tracking.
  * Provides location updates via Kotlin Flow with configurable intervals and accuracy.
+ * Enhanced for background service compatibility and crash recovery.
  */
 class LocationService(private val context: Context) {
     
@@ -36,6 +37,13 @@ class LocationService(private val context: Context) {
     
     private var locationCallback: LocationCallback? = null
     
+    // Background service integration
+    private val _serviceCompatibilityMode = MutableStateFlow(false)
+    val serviceCompatibilityMode: StateFlow<Boolean> = _serviceCompatibilityMode.asStateFlow()
+    
+    private val _lastKnownAccuracy = MutableStateFlow<Float?>(null)
+    val lastKnownAccuracy: StateFlow<Float?> = _lastKnownAccuracy.asStateFlow()
+    
     enum class LocationAccuracy {
         UNKNOWN, POOR, GOOD, EXCELLENT
     }
@@ -53,6 +61,52 @@ class LocationService(private val context: Context) {
             Manifest.permission.ACCESS_BACKGROUND_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
     }
+    
+    /**
+     * Enable service compatibility mode for background operation
+     */
+    fun enableServiceCompatibilityMode() {
+        _serviceCompatibilityMode.value = true
+    }
+    
+    /**
+     * Disable service compatibility mode
+     */
+    fun disableServiceCompatibilityMode() {
+        _serviceCompatibilityMode.value = false
+    }
+    
+    /**
+     * Check if location service is ready for background operation
+     */
+    fun isReadyForBackgroundOperation(): Boolean {
+        return hasLocationPermission() && hasBackgroundLocationPermission()
+    }
+    
+    /**
+     * Get comprehensive location status for service management
+     */
+    fun getLocationStatus(): LocationServiceStatus {
+        return LocationServiceStatus(
+            hasLocationPermission = hasLocationPermission(),
+            hasBackgroundPermission = hasBackgroundLocationPermission(),
+            isTracking = _isTracking.value,
+            currentAccuracy = _locationAccuracy.value,
+            lastAccuracyValue = _lastKnownAccuracy.value,
+            isServiceCompatible = _serviceCompatibilityMode.value,
+            locationHistorySize = _locationHistory.value.size
+        )
+    }
+    
+    data class LocationServiceStatus(
+        val hasLocationPermission: Boolean,
+        val hasBackgroundPermission: Boolean,
+        val isTracking: Boolean,
+        val currentAccuracy: LocationAccuracy,
+        val lastAccuracyValue: Float?,
+        val isServiceCompatible: Boolean,
+        val locationHistorySize: Int
+    )
     
     /**
      * Starts location tracking with configurable intervals.
@@ -100,6 +154,8 @@ class LocationService(private val context: Context) {
                     
                     // Add to history if accuracy is good enough
                     val accuracy = location.accuracy
+                    _lastKnownAccuracy.value = accuracy
+                    
                     if (accuracy <= 20f) { // 20 meters or better
                         val currentHistory = _locationHistory.value.toMutableList()
                         currentHistory.add(locationData)
@@ -111,6 +167,12 @@ class LocationService(private val context: Context) {
                             accuracy <= 10f -> LocationAccuracy.GOOD
                             else -> LocationAccuracy.POOR
                         }
+                    } else if (_serviceCompatibilityMode.value) {
+                        // In service mode, accept lower accuracy to maintain tracking
+                        val currentHistory = _locationHistory.value.toMutableList()
+                        currentHistory.add(locationData)
+                        _locationHistory.value = currentHistory
+                        _locationAccuracy.value = LocationAccuracy.POOR
                     }
                 }
             }
@@ -282,4 +344,62 @@ class LocationService(private val context: Context) {
     fun clearLocationHistory() {
         _locationHistory.value = emptyList()
     }
+    
+    /**
+     * Enhanced location tracking with service-optimized settings
+     */
+    fun startServiceOptimizedTracking(
+        intervalMillis: Long = 2000L, // Slightly longer for battery optimization
+        fastestIntervalMillis: Long = 1000L, 
+        smallestDisplacementMeters: Float = 2f // Slightly larger displacement
+    ) {
+        enableServiceCompatibilityMode()
+        startLocationTracking(intervalMillis, fastestIntervalMillis, smallestDisplacementMeters)
+    }
+    
+    /**
+     * Get location updates optimized for background service operation
+     */
+    fun getServiceOptimizedLocationUpdates(): Flow<LocationData> {
+        enableServiceCompatibilityMode()
+        return getLocationUpdates(
+            intervalMillis = 2000L,
+            fastestIntervalMillis = 1000L,
+            smallestDisplacementMeters = 2f
+        )
+    }
+    
+    /**
+     * Restore location history from crash recovery
+     */
+    fun restoreLocationHistory(history: List<LocationData>) {
+        _locationHistory.value = history
+        if (history.isNotEmpty()) {
+            _currentLocation.value = history.last()
+        }
+    }
+    
+    /**
+     * Get metrics suitable for service state persistence
+     */
+    fun getServiceMetrics(): LocationServiceMetrics {
+        val history = _locationHistory.value
+        return LocationServiceMetrics(
+            totalPoints = history.size,
+            totalDistance = if (history.size >= 2) calculateDistance(history) else 0f,
+            totalElevationGain = if (history.size >= 2) calculateElevationGain(history) else 0f,
+            averageAccuracy = _lastKnownAccuracy.value ?: 0f,
+            isTracking = _isTracking.value,
+            lastUpdateTime = System.currentTimeMillis()
+        )
+    }
+    
+    data class LocationServiceMetrics(
+        val totalPoints: Int,
+        val totalDistance: Float,
+        val totalElevationGain: Float,
+        val averageAccuracy: Float,
+        val isTracking: Boolean,
+        val lastUpdateTime: Long
+    )
 }

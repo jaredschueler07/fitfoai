@@ -25,6 +25,10 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     
+    <!-- Notification permissions for Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" 
+        android:minSdkVersion="33" />
+    
     <!-- Google Fit and health data permissions -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
@@ -79,6 +83,21 @@
                       android:host="googlefit-callback" />
             </intent-filter>
         </activity>
+
+        <!-- Background Location Service for GPS tracking -->
+        <service
+            android:name=".data.service.BackgroundLocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
+        
+        <!-- Session Recovery WorkManager Worker -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="shortService"
+            tools:node="merge" />
+
     </application>
 
 </manifest>
