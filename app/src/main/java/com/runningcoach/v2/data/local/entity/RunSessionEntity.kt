@@ -24,6 +24,9 @@ import androidx.room.PrimaryKey
         Index(value = ["startTime"]),
         Index(value = ["googleFitSessionId"], unique = true),
         Index(value = ["syncedWithGoogleFit"]),
+        Index(value = ["healthConnectSessionId"], unique = true),
+        Index(value = ["syncedWithHealthConnect"]),
+        Index(value = ["migratedToHealthConnect"]),
         Index(value = ["source"])
     ]
 )
@@ -87,6 +90,15 @@ data class RunSessionEntity(
     val syncedWithGoogleFit: Boolean = false,
     val lastSyncTime: Long? = null,
     val syncError: String? = null,
+    
+    // Health Connect sync
+    val healthConnectSessionId: String? = null,
+    val syncedWithHealthConnect: Boolean = false,
+    val healthConnectLastSyncTime: Long? = null,
+    val healthConnectSyncError: String? = null,
+    
+    // Migration status
+    val migratedToHealthConnect: Boolean = false,
     
     // Metadata
     val createdAt: Long = System.currentTimeMillis(),

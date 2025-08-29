@@ -22,6 +22,9 @@ interface RunSessionDao {
     @Query("SELECT * FROM run_sessions WHERE googleFitSessionId = :googleFitId LIMIT 1")
     suspend fun getSessionByGoogleFitId(googleFitId: String): RunSessionEntity?
     
+    @Query("SELECT * FROM run_sessions WHERE healthConnectSessionId = :healthConnectId LIMIT 1")
+    suspend fun getSessionByHealthConnectId(healthConnectId: String): RunSessionEntity?
+    
     @Query("SELECT * FROM run_sessions WHERE userId = :userId ORDER BY startTime DESC")
     fun getUserSessions(userId: Long): Flow<List<RunSessionEntity>>
     
@@ -78,12 +81,51 @@ interface RunSessionDao {
     )
     
     @Query("""
+        UPDATE run_sessions 
+        SET syncedWithHealthConnect = :synced, 
+            healthConnectSessionId = :healthConnectId,
+            healthConnectLastSyncTime = :syncTime 
+        WHERE id = :sessionId
+    """)
+    suspend fun updateHealthConnectSync(
+        sessionId: Long,
+        synced: Boolean,
+        healthConnectId: String? = null,
+        syncTime: Long = System.currentTimeMillis()
+    )
+    
+    @Query("""
         SELECT * FROM run_sessions 
         WHERE userId = :userId 
         AND syncedWithGoogleFit = 0 
         ORDER BY startTime DESC
     """)
     suspend fun getUnsyncedSessions(userId: Long): List<RunSessionEntity>
+    
+    @Query("""
+        SELECT * FROM run_sessions 
+        WHERE migratedToHealthConnect = 0 
+        AND source = 'GOOGLE_FIT'
+        ORDER BY startTime DESC
+    """)
+    suspend fun getUnmigratedGoogleFitSessions(): List<RunSessionEntity>
+    
+    @Query("UPDATE run_sessions SET migratedToHealthConnect = 1 WHERE id = :sessionId")
+    suspend fun markAsMigrated(sessionId: Long)
+    
+    @Query("""
+        UPDATE run_sessions 
+        SET distance = :distance, 
+            avgSpeed = :avgSpeed, 
+            avgPace = :avgPace 
+        WHERE id = :sessionId
+    """)
+    suspend fun updateSessionData(
+        sessionId: Long,
+        distance: Float,
+        avgSpeed: Float,
+        avgPace: Float?
+    )
     
     @Query("""
         SELECT SUM(distance) as totalDistance,

@@ -310,6 +310,15 @@ This codebase represents a production-ready Android application with advanced ba
 
 **RULE**: This section MUST be updated every time a mistake is identified. Always check this list before making changes.
 
+### Health Connect Migration Mistakes
+
+18. **Referenced Non-Existent Database Dependencies** ⚠️
+    - **Mistake**: Using `HealthConnectDailySummaryEntity` and `healthConnectDao` before creating them
+    - **Impact**: Compilation errors, missing database infrastructure
+    - **Fix**: Always create database entities and DAOs before using them in managers
+    - **Occurred**: HealthConnectManager implementation - NEEDS IMMEDIATE FIX
+    - **Prevention**: Check all dependencies exist before using them in business logic
+
 ### Database & Entity Mistakes
 
 1. **Property Name Inconsistencies** ⚠️

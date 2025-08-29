@@ -127,6 +127,14 @@
 -keep class com.google.android.gms.location.** { *; }
 -keep class com.google.android.gms.auth.** { *; }
 
+# Keep Health Connect classes
+-keep class androidx.health.connect.client.** { *; }
+-keep class androidx.health.connect.client.records.** { *; }
+-keep class androidx.health.connect.client.permission.** { *; }
+-keep class androidx.health.connect.client.request.** { *; }
+-keep class androidx.health.connect.client.response.** { *; }
+-dontwarn androidx.health.connect.client.**
+
 # === MEDIA & AUDIO ===
 # Keep MediaPlayer and Media3 classes
 -keep class androidx.media.** { *; }

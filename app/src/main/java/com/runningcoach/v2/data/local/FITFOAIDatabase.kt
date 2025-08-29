@@ -20,11 +20,12 @@ import com.runningcoach.v2.data.local.converter.Converters
         WorkoutEntity::class,
         AIConversationEntity::class,
         GoogleFitDailySummaryEntity::class,
+        HealthConnectDailySummaryEntity::class,
         ConnectedAppEntity::class,
         VoiceLineEntity::class,
         CoachPersonalityEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -36,6 +37,7 @@ abstract class FITFOAIDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun aiConversationDao(): AIConversationDao
     abstract fun googleFitDailySummaryDao(): GoogleFitDailySummaryDao
+    abstract fun healthConnectDailySummaryDao(): HealthConnectDailySummaryDao
     abstract fun connectedAppDao(): ConnectedAppDao
     abstract fun voiceLineDao(): VoiceLineDao
     abstract fun coachPersonalityDao(): CoachPersonalityDao
@@ -188,6 +190,59 @@ abstract class FITFOAIDatabase : RoomDatabase() {
             }
         }
         
+        /**
+         * Migration from version 7 to 8: Add Health Connect support
+         * Adds Health Connect daily summaries table and Health Connect sync fields to run_sessions
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create HealthConnectDailySummaryEntity table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `health_connect_daily_summaries` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `userId` INTEGER NOT NULL,
+                        `date` INTEGER NOT NULL,
+                        `steps` INTEGER NOT NULL DEFAULT 0,
+                        `distance` REAL NOT NULL DEFAULT 0.0,
+                        `calories` INTEGER NOT NULL DEFAULT 0,
+                        `activeMinutes` INTEGER NOT NULL DEFAULT 0,
+                        `avgHeartRate` REAL,
+                        `maxHeartRate` REAL,
+                        `minHeartRate` REAL,
+                        `floorsClimbed` INTEGER,
+                        `exerciseMinutes` INTEGER NOT NULL DEFAULT 0,
+                        `sleepMinutes` INTEGER,
+                        `sleepQuality` INTEGER,
+                        `waterIntakeMl` INTEGER,
+                        `weight` REAL,
+                        `lastSynced` INTEGER NOT NULL,
+                        `dataSource` TEXT NOT NULL DEFAULT 'HEALTH_CONNECT',
+                        `recordIds` TEXT,
+                        `syncStatus` TEXT NOT NULL DEFAULT 'SYNCED',
+                        `syncError` TEXT,
+                        FOREIGN KEY(`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE
+                    )
+                """)
+                
+                // Add Health Connect sync fields to run_sessions
+                database.execSQL("ALTER TABLE `run_sessions` ADD COLUMN `healthConnectSessionId` TEXT")
+                database.execSQL("ALTER TABLE `run_sessions` ADD COLUMN `syncedWithHealthConnect` INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE `run_sessions` ADD COLUMN `healthConnectLastSyncTime` INTEGER")
+                database.execSQL("ALTER TABLE `run_sessions` ADD COLUMN `healthConnectSyncError` TEXT")
+                database.execSQL("ALTER TABLE `run_sessions` ADD COLUMN `migratedToHealthConnect` INTEGER NOT NULL DEFAULT 0")
+                
+                // Create indices for Health Connect daily summaries
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_health_connect_daily_summaries_userId` ON `health_connect_daily_summaries` (`userId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_health_connect_daily_summaries_date` ON `health_connect_daily_summaries` (`date`)")
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_health_connect_daily_summaries_userId_date` ON `health_connect_daily_summaries` (`userId`, `date`)")
+                
+                // Create indices for new run_sessions fields
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_run_sessions_healthConnectSessionId` ON `run_sessions` (`healthConnectSessionId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_run_sessions_syncedWithHealthConnect` ON `run_sessions` (`syncedWithHealthConnect`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_run_sessions_migratedToHealthConnect` ON `run_sessions` (`migratedToHealthConnect`)")
+            }
+        }
+        
         fun getDatabase(context: Context): FITFOAIDatabase {
             return INSTANCE ?: synchronized(this) {
                 val builder = Room.databaseBuilder(
@@ -195,7 +250,7 @@ abstract class FITFOAIDatabase : RoomDatabase() {
                     FITFOAIDatabase::class.java,
                     "fitfoai_database"
                 )
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                 .fallbackToDestructiveMigration() // Allow destructive migration if schema mismatch
                 .addCallback(DatabaseCallback())
                 
