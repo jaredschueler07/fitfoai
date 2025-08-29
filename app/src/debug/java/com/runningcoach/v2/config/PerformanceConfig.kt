@@ -71,7 +71,6 @@ object PerformanceConfig {
                 .detectLeakedClosableObjects()
                 .detectLeakedRegistrationObjects()
                 .detectActivityLeaks()
-                .detectServiceLeaks()
                 .penaltyLog()
                 .build()
         )

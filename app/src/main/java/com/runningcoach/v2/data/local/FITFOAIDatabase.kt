@@ -196,19 +196,10 @@ abstract class FITFOAIDatabase : RoomDatabase() {
                     "fitfoai_database"
                 )
                 .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .fallbackToDestructiveMigration() // Allow destructive migration if schema mismatch
                 .addCallback(DatabaseCallback())
                 
-                // Add performance monitoring for debug builds
-                if (BuildConfig.DEBUG) {
-                    try {
-                        // Initialize performance monitoring (debug builds only)
-                        val performanceConfigClass = Class.forName("com.runningcoach.v2.config.PerformanceConfig")
-                        val initializeMethod = performanceConfigClass.getMethod("initialize")
-                        initializeMethod.invoke(null)
-                    } catch (e: ClassNotFoundException) {
-                        // PerformanceConfig not available (shouldn't happen in debug builds)
-                    }
-                }
+                // Performance monitoring is handled by DatabaseCallback
                 
                 val instance = builder.build()
                 INSTANCE = instance

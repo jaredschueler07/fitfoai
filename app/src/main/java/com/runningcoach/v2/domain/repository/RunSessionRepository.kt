@@ -96,6 +96,8 @@ interface RunSessionRepository {
 /**
  * Domain model representing a run session
  */
+enum class SessionSource { FITFOAI, GOOGLE_FIT }
+
 data class RunSession(
     val id: Long,
     val userId: Long,
@@ -110,18 +112,17 @@ data class RunSession(
     val routePoints: List<LocationData>? = null,
     val notes: String? = null,
     val isCompleted: Boolean = false,
+    val source: SessionSource? = null,
     val createdAt: Long = System.currentTimeMillis()
 ) {
     /**
      * Gets formatted distance display
      */
     fun getFormattedDistance(): String {
-        return distance?.let { dist ->
-            when {
-                dist < 1000 -> "${dist.toInt()}m"
-                else -> "${String.format("%.2f", dist / 1000)}km"
-            }
-        } ?: "0m"
+        return distance?.let { distMeters ->
+            val miles = distMeters / 1609.344f
+            "${String.format("%.2f", miles)} mi"
+        } ?: "0.00 mi"
     }
     
     /**
@@ -145,10 +146,11 @@ data class RunSession(
      * Gets formatted pace display
      */
     fun getFormattedPace(): String {
-        return averagePace?.let { pace ->
-            val minutes = pace.toInt()
-            val seconds = ((pace - minutes) * 60).toInt()
-            String.format("%d:%02d /km", minutes, seconds)
-        } ?: "--:-- /km"
+        return averagePace?.let { paceMinPerKm ->
+            val pacePerMile = paceMinPerKm / 0.621371f
+            val minutes = pacePerMile.toInt()
+            val seconds = ((pacePerMile - minutes) * 60).toInt()
+            String.format("%d:%02d /mi", minutes, seconds)
+        } ?: "--:-- /mi"
     }
 }

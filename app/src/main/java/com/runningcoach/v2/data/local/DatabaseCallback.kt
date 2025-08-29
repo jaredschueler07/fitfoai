@@ -186,7 +186,7 @@ object DatabasePerformanceMonitor {
     /**
      * Execute a query with performance monitoring (debug builds only)
      */
-    inline fun <T> executeWithMonitoring(
+    internal inline fun <T> executeWithMonitoring(
         operationType: String,
         tableName: String,
         query: String? = null,
@@ -223,7 +223,7 @@ object DatabasePerformanceMonitor {
     /**
      * Execute a transaction with performance monitoring (debug builds only)
      */
-    inline fun <T> executeTransactionWithMonitoring(
+    internal inline fun <T> executeTransactionWithMonitoring(
         operationName: String,
         crossinline operation: () -> T
     ): T {

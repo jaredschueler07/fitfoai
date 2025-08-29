@@ -252,10 +252,11 @@ fun PersonalizeProfileScreen(
                 OutlinedTextField(
                     value = weight,
                     onValueChange = { input -> weight = input.filter { it.isDigit() } },
-                    label = { Text("Weight (lbs)") },
+                    label = { Text("Weight") },
                     placeholder = { Text("150") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
+                    suffix = { Text("lbs", color = AppColors.Neutral400) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AppColors.Primary,
                         focusedLabelColor = AppColors.Primary,

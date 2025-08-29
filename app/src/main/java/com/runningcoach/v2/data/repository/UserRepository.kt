@@ -147,20 +147,36 @@ class UserRepository(
     
     private fun parseHeight(heightString: String): Int {
         return try {
-            // Assume height is in cm, parse as integer
-            val cleanHeight = heightString.replace(Regex("[^0-9.]"), "")
-            cleanHeight.toFloat().toInt()
+            // Expect imperial input like 5'8" or 5' 8"; convert to centimeters for storage
+            val trimmed = heightString.trim()
+            val regex = Regex("^(\\d+)[''']\\s*(\\d+)?(?:\\s*(?:\\\"|in|inches))?$")
+            val match = regex.find(trimmed)
+            if (match != null) {
+                val feet = match.groupValues[1].toInt()
+                val inches = match.groupValues.getOrNull(2)?.takeIf { it.isNotBlank() }?.toInt() ?: 0
+                val totalInches = feet * 12 + inches
+                (totalInches * 2.54).toInt() // store cm
+            } else {
+                // Fallback: if plain number is provided, interpret as inches
+                val digits = trimmed.replace(Regex("[^0-9.]"), "")
+                if (digits.isNotBlank()) {
+                    val inches = digits.toFloat()
+                    (inches * 2.54f).toInt()
+                } else 170
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to parse height: $heightString, using default", e)
             170 // Default height in cm
         }
     }
-    
+
     private fun parseWeight(weightString: String): Float {
         return try {
-            // Assume weight is in kg, parse as float
-            val cleanWeight = weightString.replace(Regex("[^0-9.]"), "")
-            cleanWeight.toFloat()
+            // Expect imperial (lbs). Convert to kg for storage.
+            val digits = weightString.trim().replace(Regex("[^0-9.]"), "")
+            if (digits.isBlank()) return 70.0f
+            val lbs = digits.toFloat()
+            (lbs / 2.20462f)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to parse weight: $weightString, using default", e)
             70.0f // Default weight in kg

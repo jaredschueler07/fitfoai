@@ -237,7 +237,15 @@ fun RunningCoachApp() {
             }
             
             composable(Screen.Progress.route) {
-                ProgressScreen()
+                val context = LocalContext.current
+                val app = context.applicationContext as RunningCoachApplication
+                val viewModel = remember {
+                    com.runningcoach.v2.presentation.screen.progress.ProgressViewModel(
+                        app.appContainer.getRunSessionsUseCase,
+                        com.runningcoach.v2.data.local.FITFOAIDatabase.getDatabase(context)
+                    )
+                }
+                ProgressScreen(viewModel = viewModel)
             }
             
             composable(Screen.Profile.route) {

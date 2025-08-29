@@ -139,6 +139,10 @@ class AppContainer(private val context: Context) {
         GetRunSessionsUseCase(runSessionRepository)
     }
     
+    val generateTrainingPlanUseCase: com.runningcoach.v2.domain.usecase.GenerateTrainingPlanUseCase by lazy {
+        com.runningcoach.v2.domain.usecase.GenerateTrainingPlanUseCase(database, llmChatService)
+    }
+    
     // Additional services for comprehensive app functionality
     val apiConnectionManager: APIConnectionManager by lazy {
         APIConnectionManager(context)

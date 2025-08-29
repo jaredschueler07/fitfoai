@@ -203,6 +203,10 @@ class RunSessionRepositoryImpl(
                         routePoints = routePoints,
                         notes = entity.notes,
                         isCompleted = entity.endTime != null,
+                        source = when (entity.source) {
+                            com.runningcoach.v2.data.local.entity.DataSource.GOOGLE_FIT -> com.runningcoach.v2.domain.repository.SessionSource.GOOGLE_FIT
+                            else -> com.runningcoach.v2.domain.repository.SessionSource.FITFOAI
+                        },
                         createdAt = entity.createdAt
                     )
                 }

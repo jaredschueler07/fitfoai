@@ -17,6 +17,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -41,15 +42,16 @@ fun DebugBuildBanner(
     val line2 = "AI: $aiProvider • $sha"
 
     // Try to get performance metrics if available
-    val performanceMetrics = try {
-        val performanceConfigClass = Class.forName("com.runningcoach.v2.config.PerformanceConfig")
-        val metricsField = performanceConfigClass.getDeclaredField("performanceMetrics")
-        metricsField.isAccessible = true
-        val stateFlow = metricsField.get(null) as kotlinx.coroutines.flow.StateFlow<*>
-        stateFlow.collectAsState().value
-    } catch (e: Exception) {
-        null
+    val performanceMetrics = remember {
+        runCatching {
+            val performanceConfigClass = Class.forName("com.runningcoach.v2.config.PerformanceConfig")
+            val metricsField = performanceConfigClass.getDeclaredField("performanceMetrics")
+            metricsField.isAccessible = true
+            metricsField.get(null) as kotlinx.coroutines.flow.StateFlow<*>
+        }.getOrNull()
     }
+    
+    val metricsValue = performanceMetrics?.collectAsState()?.value
 
     Surface(
         color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.95f),
@@ -85,7 +87,7 @@ fun DebugBuildBanner(
                     )
                 }
                 
-                if (performanceMetrics != null) {
+                if (metricsValue != null) {
                     TextButton(
                         onClick = onToggleMetrics,
                         modifier = Modifier.padding(0.dp)
@@ -98,9 +100,9 @@ fun DebugBuildBanner(
                 }
             }
             
-            if (showPerformanceMetrics && performanceMetrics != null) {
+            if (showPerformanceMetrics && metricsValue != null) {
                 Spacer(modifier = Modifier.height(4.dp))
-                DatabasePerformanceMetrics(metrics = performanceMetrics)
+                DatabasePerformanceMetrics(metrics = metricsValue)
             }
         }
     }
@@ -108,12 +110,19 @@ fun DebugBuildBanner(
 
 @Composable
 private fun DatabasePerformanceMetrics(metrics: Any) {
-    try {
-        // Use reflection to safely access metrics properties
-        val metricsClass = metrics.javaClass
-        val totalQueries = metricsClass.getDeclaredField("totalQueries").getLong(metrics)
-        val slowQueries = metricsClass.getDeclaredField("slowQueries").getLong(metrics)
-        val slowestQueryTime = metricsClass.getDeclaredField("slowestQueryTime").getLong(metrics)
+    val metricsData = remember(metrics) {
+        runCatching {
+            val metricsClass = metrics.javaClass
+            Triple(
+                metricsClass.getDeclaredField("totalQueries").getLong(metrics),
+                metricsClass.getDeclaredField("slowQueries").getLong(metrics),
+                metricsClass.getDeclaredField("slowestQueryTime").getLong(metrics)
+            )
+        }.getOrNull()
+    }
+    
+    if (metricsData != null) {
+        val (totalQueries, slowQueries, slowestQueryTime) = metricsData
         
         Column {
             Text(
@@ -138,13 +147,13 @@ private fun DatabasePerformanceMetrics(metrics: Any) {
                 Text(
                     text = "Slowest: ${slowestQueryTime}ms",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (slowestQueryTime > BuildConfig.QUERY_WARNING_THRESHOLD_MS) 
+                    color = if (slowestQueryTime > 100L) // Using hardcoded threshold since BuildConfig may not have it
                            MaterialTheme.colorScheme.error 
                            else MaterialTheme.colorScheme.onTertiaryContainer
                 )
             }
         }
-    } catch (e: Exception) {
+    } else {
         Text(
             text = "Performance metrics unavailable",
             style = MaterialTheme.typography.labelSmall,

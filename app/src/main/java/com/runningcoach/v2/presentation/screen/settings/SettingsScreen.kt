@@ -23,6 +23,7 @@ import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.repository.UserRepository
 import com.runningcoach.v2.data.service.APIConnectionManager
@@ -79,6 +80,11 @@ fun SettingsScreen(
     var backgroundLocation by remember { mutableStateOf(true) }
     var batteryOptimization by remember { mutableStateOf(false) }
     var highAccuracyGPS by remember { mutableStateOf(true) }
+    
+    // Plan generation dialog state
+    var showPlanDialog by remember { mutableStateOf(false) }
+    var isGeneratingPlan by remember { mutableStateOf(false) }
+    var planMessage by remember { mutableStateOf<String?>(null) }
     
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -325,6 +331,16 @@ fun SettingsScreen(
                                     apiConnectionManager.disconnectGoogleFit()
                                 }
                             )
+
+                            // Generate Training Plan (Gemini)
+                            SettingItem(
+                                title = "Generate Training Plan",
+                                subtitle = "Use Gemini to create a plan",
+                                icon = Icons.Default.DateRange,
+                                onClick = {
+                                    showPlanDialog = true
+                                }
+                            )
                         }
                     }
                 )
@@ -352,8 +368,63 @@ fun SettingsScreen(
             }
         }
     }
+
+    // Show plan generation dialog and handle callback
+    PlanGenDialogHost(
+        isVisible = showPlanDialog,
+        isGenerating = isGeneratingPlan,
+        onDismiss = { showPlanDialog = false },
+        onGenerate = { params ->
+            val app = (context.applicationContext as com.runningcoach.v2.RunningCoachApplication)
+            val useCase = app.appContainer.generateTrainingPlanUseCase
+            val db = com.runningcoach.v2.data.local.FITFOAIDatabase.getDatabase(context)
+            scope.launch {
+                isGeneratingPlan = true
+                planMessage = null
+                try {
+                    val user = db.userDao().getCurrentUser().first()
+                    val userId = user?.id ?: 1L
+                    val planParams = com.runningcoach.v2.domain.usecase.PlanParams(
+                        userId = userId,
+                        goals = "Train for ${params.raceType.displayName}",
+                        fitnessLevel = params.experienceLevel.name,
+                        targetRace = params.raceType.displayName,
+                        raceDate = params.targetDate
+                    )
+                    val result = useCase.generate(planParams)
+                    planMessage = if (result.isSuccess) {
+                        "Training plan created (ID: ${result.getOrNull()})"
+                    } else {
+                        "Failed to generate plan: ${result.exceptionOrNull()?.message}"
+                    }
+                } catch (e: Exception) {
+                    planMessage = "Error: ${e.message}"
+                } finally {
+                    isGeneratingPlan = false
+                    showPlanDialog = false
+                }
+            }
+        }
+    )
 }
 
+// Plan Generation Dialog at root of composable
+@Composable
+private fun PlanGenDialogHost(
+    isVisible: Boolean,
+    isGenerating: Boolean,
+    onDismiss: () -> Unit,
+    onGenerate: (com.runningcoach.v2.presentation.components.PlanGenerationParams) -> Unit
+) {
+    if (isVisible) {
+        com.runningcoach.v2.presentation.components.PlanGenerationDialog(
+            isVisible = isVisible,
+            onDismiss = onDismiss,
+            onGeneratePlan = onGenerate,
+            isGenerating = isGenerating
+        )
+    }
+}
 @Composable
 private fun SettingsSection(
     title: String,

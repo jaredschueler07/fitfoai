@@ -12,6 +12,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.fitness.Fitness
 import com.google.android.gms.fitness.FitnessOptions
 import com.google.android.gms.fitness.data.*
+import com.google.android.gms.fitness.data.DataSource as GoogleFitDataSource
 import com.google.android.gms.fitness.request.DataReadRequest
 import com.google.android.gms.fitness.request.DataUpdateRequest
 import com.google.android.gms.fitness.request.SessionInsertRequest
@@ -643,9 +644,9 @@ class GoogleFitManager private constructor(
     
     private suspend fun syncRecentRuns(account: GoogleSignInAccount, userId: Long) {
         try {
-            // Get sessions from the last 30 days
+            // Get sessions from the last 90 days
             val endTime = System.currentTimeMillis()
-            val startTime = endTime - TimeUnit.DAYS.toMillis(30)
+            val startTime = endTime - TimeUnit.DAYS.toMillis(90)
             
             val sessionRequest = SessionReadRequest.Builder()
                 .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS)
@@ -712,6 +713,7 @@ class GoogleFitManager private constructor(
                             calories = null, // Will be updated separately
                             route = null,
                             notes = session.description,
+                            source = com.runningcoach.v2.data.local.entity.DataSource.GOOGLE_FIT,
                             syncedWithGoogleFit = true,
                             createdAt = System.currentTimeMillis()
                         )
@@ -743,11 +745,11 @@ class GoogleFitManager private constructor(
             }
             
             // Create data source
-            val dataSource = DataSource.Builder()
-                .setAppPackageName(context)
+            val dataSource = GoogleFitDataSource.Builder()
+                .setAppPackageName(context.packageName)
                 .setDataType(DataType.TYPE_DISTANCE_DELTA)
                 .setStreamName("FITFOAI - Run Distance")
-                .setType(DataSource.TYPE_RAW)
+                .setType(GoogleFitDataSource.TYPE_RAW)
                 .build()
             
             // Create distance data set
