@@ -1,7 +1,6 @@
-package com.example.fitfoai
+package com.runningcoach.v2
 
 import org.junit.Test
-
 import org.junit.Assert.*
 
 /**

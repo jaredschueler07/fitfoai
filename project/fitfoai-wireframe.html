@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FITFOAI Wireframe & Navigation Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #fafafa;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3a5f, #4a7c97);
+            border-radius: 16px;
+            border: 1px solid #ff6b6b;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fafafa;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            color: #8ba3bd;
+        }
+        
+        .flow-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .flow-group {
+            background: #1a2f47;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2a4661;
+        }
+        
+        .flow-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .screens-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .screen {
+            background: #2d4a6b;
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 280px;
+            max-width: 300px;
+            flex: 1;
+            border: 2px solid #3a5a7a;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .screen:hover {
+            border-color: #ff6b6b;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.15);
+        }
+        
+        .screen-header {
+            background: #ff6b6b;
+            color: #fafafa;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .screen-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fafafa;
+            margin-bottom: 8px;
+        }
+        
+        .screen-subtitle {
+            font-size: 0.9rem;
+            color: #8ba3bd;
+            margin-bottom: 15px;
+        }
+        
+        .screen-features {
+            list-style: none;
+        }
+        
+        .screen-features li {
+            font-size: 0.85rem;
+            color: #b8c9d9;
+            margin-bottom: 6px;
+            padding-left: 16px;
+            position: relative;
+        }
+        
+        .screen-features li:before {
+            content: '•';
+            color: #ff6b6b;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        .nav-indicator {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid #ff6b6b;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: #ff6b6b;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .arrow {
+            text-align: center;
+            color: #ff6b6b;
+            font-size: 1.5rem;
+            margin: 10px 0;
+        }
+        
+        .bottom-nav-visual {
+            background: #1a2f47;
+            border: 2px solid #ff6b6b;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .bottom-nav-title {
+            text-align: center;
+            color: #ff6b6b;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .bottom-nav-items {
+            display: flex;
+            justify-content: space-around;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .nav-item {
+            text-align: center;
+            color: #8ba3bd;
+            font-size: 0.8rem;
+            padding: 8px;
+        }
+        
+        .nav-item.active {
+            color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+            border-radius: 8px;
+        }
+        
+        .connections {
+            margin-top: 30px;
+            background: #1a2f47;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2a4661;
+        }
+        
+        .connection-title {
+            color: #ff6b6b;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .connection-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .connection-item {
+            background: #2d4a6b;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 4px solid #ff6b6b;
+            font-size: 0.85rem;
+        }
+        
+        .design-system {
+            background: #1a2f47;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+            border: 1px solid #2a4661;
+        }
+        
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .color-item {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+        
+        .color-deep-blue { background: #1e3a5f; }
+        .color-athlete-blue { background: #4a7c97; }
+        .color-coral { background: #ff6b6b; }
+        .color-coral-secondary { background: #ff8c42; }
+        .color-surface { background: #2d4a6b; }
+        .color-neutral { background: #6b8ba8; }
+        
+        @media (max-width: 768px) {
+            .screens-row {
+                flex-direction: column;
+            }
+            
+            .screen {
+                max-width: none;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .connection-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏃‍♀️ FITFOAI App Wireframe & Navigation</h1>
+            <p>Complete UI structure and screen flow analysis for the AI-powered fitness coaching app</p>
+        </div>
+
+        <!-- ONBOARDING FLOW -->
+        <div class="flow-section">
+            <h2 class="section-title">📱 Onboarding Flow (New Users)</h2>
+            <div class="flow-group">
+                <div class="flow-title">First-Time User Experience</div>
+                <div class="screens-row">
+                    <div class="screen">
+                        <div class="screen-header">WELCOME</div>
+                        <div class="screen-title">Welcome Screen</div>
+                        <div class="screen-subtitle">First impression & brand introduction</div>
+                        <ul class="screen-features">
+                            <li>Large FITFOAI logo with athletic styling</li>
+                            <li>"Your Personal Running Companion" tagline</li>
+                            <li>Hero circular logo placeholder</li>
+                            <li>Athletic blue gradient background</li>
+                            <li>Primary "Get Started" CTA button</li>
+                            <li>Motivational copy about fitness journey</li>
+                        </ul>
+                        <div class="nav-indicator">Entry Point → Connect Apps</div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="screen">
+                        <div class="screen-header">CONNECT</div>
+                        <div class="screen-title">Connect Apps Screen</div>
+                        <div class="screen-subtitle">Link Google Fit & Spotify accounts</div>
+                        <ul class="screen-features">
+                            <li>Google Fit connection card with status</li>
+                            <li>Spotify integration card with OAuth</li>
+                            <li>Real-time connection status indicators</li>
+                            <li>Success/error state handling</li>
+                            <li>"Continue" button (conditional)</li>
+                            <li>"Skip for now" secondary option</li>
+                        </ul>
+                        <div class="nav-indicator">OAuth Flow → Profile Setup</div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="screen">
+                        <div class="screen-header">PROFILE</div>
+                        <div class="screen-title">Personalize Profile</div>
+                        <div class="screen-subtitle">Fitness level & personal info</div>
+                        <ul class="screen-features">
+                            <li>Age, height, weight input fields</li>
+                            <li>Fitness level selector</li>
+                            <li>Running experience questionnaire</li>
+                            <li>VO2 max and heart rate zones</li>
+                            <li>Coach personality preferences</li>
+                            <li>Form validation and progress saving</li>
+                        </ul>
+                        <div class="nav-indicator">Profile Data → Goal Setting</div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="screen">
+                        <div class="screen-header">GOALS</div>
+                        <div class="screen-title">Set Event Goal</div>
+                        <div class="screen-subtitle">Race targets & training objectives</div>
+                        <ul class="screen-features">
+                            <li>Race distance selection (5K, 10K, Half, Full)</li>
+                            <li>Target race date picker</li>
+                            <li>Goal finish time input</li>
+                            <li>Training plan preview</li>
+                            <li>Weekly commitment preferences</li>
+                            <li>Complete onboarding action</li>
+                        </ul>
+                        <div class="nav-indicator">Complete Setup → Dashboard</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN APP SCREENS -->
+        <div class="flow-section">
+            <h2 class="section-title">🎯 Main App Screens (Post-Onboarding)</h2>
+            
+            <div class="bottom-nav-visual">
+                <div class="bottom-nav-title">Bottom Navigation Structure</div>
+                <div class="bottom-nav-items">
+                    <div class="nav-item active">
+                        🏠<br>Home
+                    </div>
+                    <div class="nav-item">
+                        🤖<br>AI Coach
+                    </div>
+                    <div class="nav-item">
+                        📊<br>Progress
+                    </div>
+                    <div class="nav-item">
+                        👤<br>Profile
+                    </div>
+                </div>
+            </div>
+
+            <div class="flow-group">
+                <div class="flow-title">Core Navigation Screens (Bottom Tab Bar)</div>
+                <div class="screens-row">
+                    <div class="screen">
+                        <div class="screen-header">HOME</div>
+                        <div class="screen-title">Dashboard Screen</div>
+                        <div class="screen-subtitle">Central hub for all activities</div>
+                        <ul class="screen-features">
+                            <li>Welcome back message with user name</li>
+                            <li>Today's Guided Run card with coach</li>
+                            <li>Weekly activity bar chart</li>
+                            <li>Google Fit integration data display</li>
+                            <li>Steps, distance, calories, heart rate</li>
+                            <li>Training plan overview</li>
+                            <li>Past workouts list</li>
+                            <li>Quick "Start Run" action button</li>
+                        </ul>
+                        <div class="nav-indicator">Primary Tab - Always Accessible</div>
+                    </div>
+
+                    <div class="screen">
+                        <div class="screen-header">AI COACH</div>
+                        <div class="screen-title">AI Coach Screen</div>
+                        <div class="screen-subtitle">Chat interface with fitness AI</div>
+                        <ul class="screen-features">
+                            <li>Conversational chat interface</li>
+                            <li>AI avatar with distinctive styling</li>
+                            <li>Message bubbles (user vs AI)</li>
+                            <li>Typing indicators and loading states</li>
+                            <li>Input field with send button</li>
+                            <li>Personalized responses based on data</li>
+                            <li>Training, nutrition, recovery advice</li>
+                            <li>Auto-scroll to latest messages</li>
+                        </ul>
+                        <div class="nav-indicator">Tab 2 - Vertex AI Integration</div>
+                    </div>
+
+                    <div class="screen">
+                        <div class="screen-header">PROGRESS</div>
+                        <div class="screen-title">Progress Screen</div>
+                        <div class="screen-subtitle">Analytics & achievement tracking</div>
+                        <ul class="screen-features">
+                            <li>Weekly summary metrics</li>
+                            <li>Distance, sessions, and time stats</li>
+                            <li>Monthly goals with progress bars</li>
+                            <li>Goal completion percentages</li>
+                            <li>Recent achievements list</li>
+                            <li>Personal bests and milestones</li>
+                            <li>Consistency streak tracking</li>
+                            <li>Trophy/badge visual system</li>
+                        </ul>
+                        <div class="nav-indicator">Tab 3 - Analytics Hub</div>
+                    </div>
+
+                    <div class="screen">
+                        <div class="screen-header">PROFILE</div>
+                        <div class="screen-title">Profile Screen</div>
+                        <div class="screen-subtitle">Currently shows API Testing</div>
+                        <ul class="screen-features">
+                            <li>Temporary: API testing interface</li>
+                            <li>Google Fit connection tests</li>
+                            <li>Spotify integration tests</li>
+                            <li>Real-time API status indicators</li>
+                            <li>Debug information display</li>
+                            <li>Connection error handling</li>
+                            <li>Future: User profile management</li>
+                            <li>Future: Settings and preferences</li>
+                        </ul>
+                        <div class="nav-indicator">Tab 4 - Debug/Future Profile</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURE SCREENS -->
+        <div class="flow-section">
+            <h2 class="section-title">🎽 Feature Screens (Accessed from Dashboard)</h2>
+            
+            <div class="flow-group">
+                <div class="flow-title">Core Running Features</div>
+                <div class="screens-row">
+                    <div class="screen">
+                        <div class="screen-header">TRACKING</div>
+                        <div class="screen-title">Run Tracking Screen</div>
+                        <div class="screen-subtitle">Live GPS run recording & metrics</div>
+                        <ul class="screen-features">
+                            <li>Athletic blue gradient background</li>
+                            <li>Large distance display (coral accent)</li>
+                            <li>Duration, pace, speed, calories grid</li>
+                            <li>GPS status with signal strength</li>
+                            <li>Location point tracking counter</li>
+                            <li>Interactive map with route overlay</li>
+                            <li>Circular start/pause/stop buttons</li>
+                            <li>Background tracking indicators</li>
+                            <li>Battery optimization warnings</li>
+                        </ul>
+                        <div class="nav-indicator">From Dashboard "Start Run"</div>
+                    </div>
+
+                    <div class="screen">
+                        <div class="screen-header">PERMISSIONS</div>
+                        <div class="screen-title">Permission Screen</div>
+                        <div class="screen-subtitle">Location & background permissions</div>
+                        <ul class="screen-features">
+                            <li>Location permission explanation</li>
+                            <li>Background location permission</li>
+                            <li>Permission status indicators</li>
+                            <li>Step-by-step permission flow</li>
+                            <li>Educational content about necessity</li>
+                            <li>Manual permission request buttons</li>
+                            <li>Fallback for denied permissions</li>
+                            <li>Return to previous screen on grant</li>
+                        </ul>
+                        <div class="nav-indicator">From Dashboard → Settings</div>
+                    </div>
+
+                    <div class="screen">
+                        <div class="screen-header">SETTINGS</div>
+                        <div class="screen-title">Settings Screen</div>
+                        <div class="screen-subtitle">App configuration & preferences</div>
+                        <ul class="screen-features">
+                            <li>User profile editing</li>
+                            <li>Coach personality selection</li>
+                            <li>Voice coaching preferences</li>
+                            <li>Unit system (metric/imperial)</li>
+                            <li>Notification settings</li>
+                            <li>Privacy and data controls</li>
+                            <li>Connected apps management</li>
+                            <li>App version and info</li>
+                        </ul>
+                        <div class="nav-indicator">From Dashboard Header</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NAVIGATION CONNECTIONS -->
+        <div class="connections">
+            <h3 class="connection-title">🔗 Screen Navigation Connections</h3>
+            <div class="connection-list">
+                <div class="connection-item">
+                    <strong>Welcome → Connect Apps</strong><br>
+                    "Get Started" button initiates onboarding flow
+                </div>
+                <div class="connection-item">
+                    <strong>Connect Apps → Profile</strong><br>
+                    "Continue" or "Skip" advances to personalization
+                </div>
+                <div class="connection-item">
+                    <strong>Profile → Goal Setting</strong><br>
+                    "Complete" saves data and moves to goals
+                </div>
+                <div class="connection-item">
+                    <strong>Goal Setting → Dashboard</strong><br>
+                    Completes onboarding, clears navigation stack
+                </div>
+                <div class="connection-item">
+                    <strong>Dashboard → Run Tracking</strong><br>
+                    "Start Run" button launches GPS tracking
+                </div>
+                <div class="connection-item">
+                    <strong>Dashboard → Settings</strong><br>
+                    Settings icon in header navigates to config
+                </div>
+                <div class="connection-item">
+                    <strong>Dashboard → Permissions</strong><br>
+                    Via settings or location permission prompts
+                </div>
+                <div class="connection-item">
+                    <strong>Bottom Navigation</strong><br>
+                    Persistent tabs: Home, AI Coach, Progress, Profile
+                </div>
+                <div class="connection-item">
+                    <strong>Run Tracking → Dashboard</strong><br>
+                    Back button returns to home after session
+                </div>
+                <div class="connection-item">
+                    <strong>All Screens → Back/Close</strong><br>
+                    Navigation stack management with proper cleanup
+                </div>
+            </div>
+        </div>
+
+        <!-- DESIGN SYSTEM -->
+        <div class="design-system">
+            <h3 class="connection-title">🎨 Athletic Blue Design System</h3>
+            <p style="color: #8ba3bd; text-align: center; margin-bottom: 20px;">
+                Chicago Marathon-inspired theme with athletic blue gradients and coral accent colors
+            </p>
+            <div class="color-palette">
+                <div class="color-item color-deep-blue">
+                    <strong>Deep Blue</strong><br>#1e3a5f<br>Background
+                </div>
+                <div class="color-item color-athlete-blue">
+                    <strong>Athlete Blue</strong><br>#4a7c97<br>Surface
+                </div>
+                <div class="color-item color-coral">
+                    <strong>Coral Accent</strong><br>#ff6b6b<br>Primary
+                </div>
+                <div class="color-item color-coral-secondary">
+                    <strong>Coral Secondary</strong><br>#ff8c42<br>Accent
+                </div>
+                <div class="color-item color-surface">
+                    <strong>Card Surface</strong><br>#2d4a6b<br>Cards
+                </div>
+                <div class="color-item color-neutral">
+                    <strong>Neutral Text</strong><br>#6b8ba8<br>Secondary
+                </div>
+            </div>
+        </div>
+
+        <!-- TECHNICAL NOTES -->
+        <div class="design-system">
+            <h3 class="connection-title">🛠️ Technical Implementation Notes</h3>
+            <div class="connection-list">
+                <div class="connection-item">
+                    <strong>Navigation Architecture:</strong><br>
+                    Jetpack Navigation Compose with nested navigation graphs for onboarding vs main app flows
+                </div>
+                <div class="connection-item">
+                    <strong>State Management:</strong><br>
+                    ViewModels with StateFlow/LiveData, Room database for offline persistence
+                </div>
+                <div class="connection-item">
+                    <strong>UI Framework:</strong><br>
+                    100% Jetpack Compose with Material 3 design system and custom athletic theme
+                </div>
+                <div class="connection-item">
+                    <strong>Permissions:</strong><br>
+                    Location permissions handled through dedicated permission screen flow
+                </div>
+                <div class="connection-item">
+                    <strong>API Integration:</strong><br>
+                    Google Fit API, Spotify Web API, Vertex AI for coaching, ElevenLabs for TTS
+                </div>
+                <div class="connection-item">
+                    <strong>Real-time Features:</strong><br>
+                    GPS tracking with FusedLocationProvider, background services for run tracking
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -6,8 +6,10 @@ import com.runningcoach.v2.data.local.entity.UserEntity
 import com.runningcoach.v2.domain.model.FitnessLevel
 import com.runningcoach.v2.domain.model.RunningGoal
 import com.runningcoach.v2.presentation.screen.profile.ProfileData
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 class UserRepository(
     private val database: FITFOAIDatabase
@@ -19,7 +21,8 @@ class UserRepository(
     private val userDao = database.userDao()
     
     suspend fun saveUserProfile(profileData: ProfileData): Result<Long> {
-        return try {
+        return withContext(Dispatchers.IO) {
+            try {
             // Check if user already exists
             val existingUser = userDao.getCurrentUser().first()
             
@@ -56,20 +59,23 @@ class UserRepository(
             }
             
             Log.i(TAG, "Successfully saved user profile for user ID: $userId")
-            Result.success(userId)
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to save user profile", e)
-            Result.failure(e)
+                Result.success(userId)
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save user profile", e)
+                Result.failure(e)
+            }
         }
     }
     
     suspend fun getCurrentUser(): UserEntity? {
-        return try {
-            userDao.getCurrentUser().first()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get current user", e)
-            null
+        return withContext(Dispatchers.IO) {
+            try {
+                userDao.getCurrentUser().first()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get current user", e)
+                null
+            }
         }
     }
     
@@ -78,7 +84,8 @@ class UserRepository(
     }
     
     suspend fun updateUserCoach(userId: Long, coachId: String): Result<Unit> {
-        return try {
+        return withContext(Dispatchers.IO) {
+            try {
             val user = userDao.getUserById(userId)
             if (user != null) {
                 val updatedUser = user.copy(
@@ -91,14 +98,16 @@ class UserRepository(
             } else {
                 Result.failure(Exception("User not found"))
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to update user coach", e)
-            Result.failure(e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update user coach", e)
+                Result.failure(e)
+            }
         }
     }
     
     suspend fun updateUserFromGoogleFit(userId: Long, weight: Float?, height: Float?): Result<Unit> {
-        return try {
+        return withContext(Dispatchers.IO) {
+            try {
             val user = userDao.getUserById(userId)
             if (user != null) {
                 var shouldUpdate = false
@@ -129,9 +138,10 @@ class UserRepository(
             } else {
                 Result.failure(Exception("User not found"))
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to update user from Google Fit", e)
-            Result.failure(e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update user from Google Fit", e)
+                Result.failure(e)
+            }
         }
     }
     
@@ -158,7 +168,8 @@ class UserRepository(
     }
     
     suspend fun deleteUser(userId: Long): Result<Unit> {
-        return try {
+        return withContext(Dispatchers.IO) {
+            try {
             val user = userDao.getUserById(userId)
             if (user != null) {
                 userDao.deleteUser(user)
@@ -167,62 +178,73 @@ class UserRepository(
             } else {
                 Result.failure(Exception("User not found"))
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to delete user", e)
-            Result.failure(e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to delete user", e)
+                Result.failure(e)
+            }
         }
     }
     
     suspend fun isOnboardingCompleted(): Boolean {
-        return try {
-            userDao.isOnboardingCompleted() ?: false
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to check onboarding status", e)
-            false
+        return withContext(Dispatchers.IO) {
+            try {
+                userDao.isOnboardingCompleted() ?: false
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to check onboarding status", e)
+                false
+            }
         }
     }
     
     suspend fun isProfileCompleted(): Boolean {
-        return try {
-            userDao.isProfileCompleted() ?: false
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to check profile status", e)
-            false
+        return withContext(Dispatchers.IO) {
+            try {
+                userDao.isProfileCompleted() ?: false
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to check profile status", e)
+                false
+            }
         }
     }
     
     suspend fun markOnboardingCompleted(): Result<Unit> {
-        return try {
+        return withContext(Dispatchers.IO) {
+            try {
             userDao.updateOnboardingCompleted(true)
             Log.i(TAG, "Marked onboarding as completed")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to mark onboarding as completed", e)
-            Result.failure(e)
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to mark onboarding as completed", e)
+                Result.failure(e)
+            }
         }
     }
     
     suspend fun markProfileCompleted(): Result<Unit> {
-        return try {
+        return withContext(Dispatchers.IO) {
+            try {
             userDao.updateProfileCompleted(true)
             Log.i(TAG, "Marked profile as completed")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to mark profile as completed", e)
-            Result.failure(e)
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to mark profile as completed", e)
+                Result.failure(e)
+            }
         }
     }
     
     // Debug method to reset onboarding for testing
     suspend fun resetOnboarding(): Result<Unit> {
-        return try {
+        return withContext(Dispatchers.IO) {
+            try {
             userDao.updateOnboardingCompleted(false)
             userDao.updateProfileCompleted(false)
             Log.i(TAG, "Reset onboarding status for testing")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to reset onboarding", e)
-            Result.failure(e)
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to reset onboarding", e)
+                Result.failure(e)
+            }
         }
     }
 }

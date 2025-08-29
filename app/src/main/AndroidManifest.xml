@@ -74,14 +74,6 @@
                       android:host="spotify-callback" />
             </intent-filter>
             
-            <!-- OAuth callback for Google Fit -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.runningcoach.v2" 
-                      android:host="googlefit-callback" />
-            </intent-filter>
         </activity>
 
         <!-- Background Location Service for GPS tracking -->

@@ -8,10 +8,14 @@ import com.runningcoach.v2.data.local.entity.GoogleFitDailySummaryEntity
 import com.runningcoach.v2.data.local.entity.UserEntity
 import com.runningcoach.v2.data.service.GoogleFitService
 import com.runningcoach.v2.domain.model.AppType
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class GoogleFitRepository(
     context: Context,
@@ -21,7 +25,7 @@ class GoogleFitRepository(
         private const val TAG = "GoogleFitRepository"
     }
     
-    private val googleFitService = GoogleFitService(context)
+    val googleFitService = GoogleFitService(context)
     private val userDao = database.userDao()
     private val googleFitDao = database.googleFitDailySummaryDao()
     private val connectedAppDao = database.connectedAppDao()
@@ -39,6 +43,10 @@ class GoogleFitRepository(
             Log.e("GoogleFitRepository", "Error in connectGoogleFit", e)
             android.content.Intent()
         }
+    }
+    
+    suspend fun handleGoogleSignInResult() {
+        googleFitService.handleGoogleSignInResult()
     }
     
     suspend fun updateConnectionStatus(userId: Long, isConnected: Boolean) {
@@ -66,22 +74,23 @@ class GoogleFitRepository(
     
     // Data Syncing
     suspend fun syncTodaysFitnessData(): Result<GoogleFitDailySummaryEntity?> {
-        return try {
-            val currentUser = userDao.getCurrentUser().first()
-                ?: return Result.failure(Exception("No current user found"))
-            
-            if (!googleFitService.isConnected.value) {
-                return Result.failure(Exception("Google Fit not connected"))
-            }
-            
-            // Get comprehensive fitness data from Google Fit
-            val fitnessDataResult = googleFitService.getComprehensiveFitnessData()
-            if (fitnessDataResult.isFailure) {
-                return Result.failure(fitnessDataResult.exceptionOrNull() ?: Exception("Failed to get fitness data"))
-            }
-            
-            val fitnessData = fitnessDataResult.getOrNull()
-                ?: return Result.failure(Exception("No fitness data available"))
+        return withContext(Dispatchers.IO) {
+            try {
+                val currentUser = userDao.getCurrentUser().first()
+                    ?: return@withContext Result.failure(Exception("No current user found"))
+                
+                if (!googleFitService.isConnected.value) {
+                    return@withContext Result.failure(Exception("Google Fit not connected"))
+                }
+                
+                // Get comprehensive fitness data from Google Fit
+                val fitnessDataResult = googleFitService.getComprehensiveFitnessData()
+                if (fitnessDataResult.isFailure) {
+                    return@withContext Result.failure(fitnessDataResult.exceptionOrNull() ?: Exception("Failed to get fitness data"))
+                }
+                
+                val fitnessData = fitnessDataResult.getOrNull()
+                    ?: return@withContext Result.failure(Exception("No fitness data available"))
             
             // Get today's date at midnight
             val today = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
@@ -127,84 +136,106 @@ class GoogleFitRepository(
             
             Log.i(TAG, "Successfully synced fitness data for user ${currentUser.id}")
             
-            Result.success(dailySummary.copy(id = summaryId))
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync fitness data", e)
-            Result.failure(e)
+                Result.success(dailySummary.copy(id = summaryId))
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync fitness data", e)
+                Result.failure(e)
+            }
         }
     }
     
     suspend fun syncWeeklyFitnessData(): Result<List<GoogleFitDailySummaryEntity>> {
-        return try {
-            val currentUser = userDao.getCurrentUser().first()
-                ?: return Result.failure(Exception("No current user found"))
-            
-            if (!googleFitService.isConnected.value) {
-                return Result.failure(Exception("Google Fit not connected"))
-            }
-            
-            // Get weekly steps data
-            val weeklyStepsResult = googleFitService.getWeeklySteps()
-            if (weeklyStepsResult.isFailure) {
-                return Result.failure(weeklyStepsResult.exceptionOrNull() ?: Exception("Failed to get weekly data"))
-            }
-            
-            val weeklySteps = weeklyStepsResult.getOrNull() ?: emptyList()
-            val summaries = mutableListOf<GoogleFitDailySummaryEntity>()
-            
-            for (dayData in weeklySteps) {
-                // Parse date from dayData.date - this would need proper date parsing
-                val dayTimestamp = System.currentTimeMillis() // Placeholder - implement proper date parsing
+        return withContext(Dispatchers.IO) {
+            try {
+                val currentUser = userDao.getCurrentUser().first()
+                    ?: return@withContext Result.failure(Exception("No current user found"))
                 
-                val existingSummary = googleFitDao.getDailySummaryForDate(currentUser.id, dayTimestamp)
-                
-                val summary = if (existingSummary != null) {
-                    existingSummary.copy(
-                        steps = dayData.steps,
-                        syncStatus = "SYNCED",
-                        lastSynced = System.currentTimeMillis(),
-                        updatedAt = System.currentTimeMillis()
-                    )
-                } else {
-                    GoogleFitDailySummaryEntity(
-                        userId = currentUser.id,
-                        date = dayTimestamp,
-                        steps = dayData.steps,
-                        syncStatus = "SYNCED",
-                        lastSynced = System.currentTimeMillis()
-                    )
+                if (!googleFitService.isConnected.value) {
+                    return@withContext Result.failure(Exception("Google Fit not connected"))
                 }
                 
-                googleFitDao.insertDailySummary(summary)
-                summaries.add(summary)
+                // Get weekly steps data
+                val weeklyStepsResult = googleFitService.getWeeklySteps()
+                if (weeklyStepsResult.isFailure) {
+                    return@withContext Result.failure(weeklyStepsResult.exceptionOrNull() ?: Exception("Failed to get weekly data"))
+                }
+                
+                val weeklySteps = weeklyStepsResult.getOrNull() ?: emptyList()
+                val summaries = mutableListOf<GoogleFitDailySummaryEntity>()
+                
+                for (dayData in weeklySteps) {
+                    // Parse date from dayData.date - convert from Google Fit date format
+                    val dayTimestamp = try {
+                        // Assuming dayData.date is in format "yyyy-MM-dd" or similar
+                        val localDate = if (dayData.date.contains("-")) {
+                            LocalDate.parse(dayData.date, DateTimeFormatter.ISO_LOCAL_DATE)
+                        } else {
+                            // Fallback to current date if parsing fails
+                            LocalDate.now()
+                        }
+                        localDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to parse date ${dayData.date}, using current time", e)
+                        System.currentTimeMillis()
+                    }
+                
+                    val existingSummary = googleFitDao.getDailySummaryForDate(currentUser.id, dayTimestamp)
+                    
+                    val summary = if (existingSummary != null) {
+                        existingSummary.copy(
+                            steps = dayData.steps,
+                            syncStatus = "SYNCED",
+                            lastSynced = System.currentTimeMillis(),
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    } else {
+                        GoogleFitDailySummaryEntity(
+                            userId = currentUser.id,
+                            date = dayTimestamp,
+                            steps = dayData.steps,
+                            syncStatus = "SYNCED",
+                            lastSynced = System.currentTimeMillis()
+                        )
+                    }
+                    
+                    googleFitDao.insertDailySummary(summary)
+                    summaries.add(summary)
+                }
+                
+                Log.i(TAG, "Successfully synced ${summaries.size} days of fitness data")
+                Result.success(summaries)
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync weekly fitness data", e)
+                Result.failure(e)
             }
-            
-            Log.i(TAG, "Successfully synced ${summaries.size} days of fitness data")
-            Result.success(summaries)
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync weekly fitness data", e)
-            Result.failure(e)
         }
     }
     
     // Data Retrieval
     suspend fun getTodaysFitnessData(): GoogleFitDailySummaryEntity? {
-        val currentUser = userDao.getCurrentUser().first() ?: return null
-        val today = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
-        return googleFitDao.getDailySummaryForDate(currentUser.id, today)
+        return withContext(Dispatchers.IO) {
+            val currentUser = userDao.getCurrentUser().first() ?: return@withContext null
+            val today = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
+            googleFitDao.getDailySummaryForDate(currentUser.id, today)
+        }
     }
     
     suspend fun getLatestFitnessData(): GoogleFitDailySummaryEntity? {
-        val currentUser = userDao.getCurrentUser().first() ?: return null
-        return googleFitDao.getLatestDailySummary(currentUser.id)
+        return withContext(Dispatchers.IO) {
+            val currentUser = userDao.getCurrentUser().first() ?: return@withContext null
+            googleFitDao.getLatestDailySummary(currentUser.id)
+        }
     }
     
     fun getFitnessDataFlow(): Flow<List<GoogleFitDailySummaryEntity>> {
-        return database.userDao().getCurrentUser().let { userFlow ->
-            // This is a simplified version - in production you'd want to properly combine flows
-            database.googleFitDailySummaryDao().getDailySummariesForUser(1L) // Placeholder user ID
+        return database.userDao().getCurrentUser().flatMapLatest { user ->
+            if (user != null) {
+                database.googleFitDailySummaryDao().getDailySummariesForUser(user.id)
+            } else {
+                kotlinx.coroutines.flow.flowOf(emptyList())
+            }
         }
     }
     

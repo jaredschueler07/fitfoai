@@ -12,6 +12,7 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object RunTracking : Screen("run_tracking")
     object APITesting : Screen("api_testing")
+    object GoogleFitTest : Screen("google_fit_test")
     object Permissions : Screen("permissions")
     object Settings : Screen("settings")
     

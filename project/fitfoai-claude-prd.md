@@ -188,16 +188,360 @@ Agents work autonomously with:
 **Sprint Duration**: Aug 30 - Sep 6, 2025 (1 week)  
 **Sprint Goal**: Complete music integration with BPM matching and playlist recommendations
 
-#### Sprint 3.4: Spotify Integration 📋 PLANNED
-```kotlin
-// Music Features
-- OAuth authentication
-- Playlist recommendations
-- BPM matching to cadence
-- Automatic track selection
-- Volume control integration
-- Offline playlist caching
-```
+#### Sprint 3.4: Critical Architecture & Integration Fixes 🚨 ACTIVE SPRINT
+**Sprint Duration**: August 29 - September 4, 2025 (5 business days)
+**Sprint Goal**: Resolve all P0 blockers and establish proper data flow architecture
+**Priority**: P0 - Critical for Production Release
+
+**Sprint Objectives**:
+1. Fix all duplicate dependency injection issues
+2. Restore Google Fit integration functionality  
+3. Establish proper repository pattern usage
+4. Fix test infrastructure and package naming
+5. Replace placeholder data with real user data flow
+
+**Critical Architecture Issues Identified**:
+
+**P0 - Database Architecture Crisis (Days 1-2)**:
+- **Duplicate Room Database Instances**: AppContainer creates one instance, Composables create another via `FITFOAIDatabase.getDatabase()` - causing data inconsistency
+- **PermissionManager Context Issue**: Casting generic Context to ComponentActivity in AppContainer line 65 will crash
+- **Repository in Composables**: DashboardScreen lines 33-34 create database and repository directly in Composable causing performance issues
+- **Package Naming Mismatch**: Tests expect `com.example.fitfoai` but actual package is `com.runningcoach.v2` - all tests failing
+
+**P1 - Data Flow Breakdown (Days 3-4)**:
+- **Google Fit Permission Gap**: Sign-in succeeds but permission requests never happen, blocking data access
+- **Placeholder Data Lock-in**: Real user profile data exists in database but UI shows hardcoded sample data
+- **Missing Error Feedback**: No user-visible error messages when Google Fit sync fails
+- **Main Thread Database Access**: Heavy database operations in UI thread causing ANR risks
+
+**P2 - Architecture Improvements (Day 5)**:
+- **HttpClient Duplication**: Multiple HttpClient instances instead of centralized singleton
+- **Unused OAuth Code**: Deep-link OAuth handling code that's not used
+- **Missing Integration Tests**: No end-to-end tests for critical user flows
+
+### 📋 Sprint 3.4 Detailed Task Breakdown
+
+#### 🔴 P0 Tasks - Day 1-2 (MUST Complete - Blocking All Functionality)
+
+**Task 3.4.1: Fix Database Singleton Pattern** [backend-ml-database-expert]
+**Story**: As a developer, I need a single database instance across the application so that data consistency is maintained
+**Acceptance Criteria**:
+- GIVEN multiple parts of the app access the database
+- WHEN any component requests database access  
+- THEN they MUST receive the same database instance from AppContainer
+- AND `FITFOAIDatabase.getDatabase()` calls MUST be removed from Composables
+- AND all database access MUST go through AppContainer singleton
+- AND database instance MUST be created only once at app startup
+**Implementation Notes**: 
+- Update AppContainer to be the single source of truth for database instance
+- Remove all direct `FITFOAIDatabase.getDatabase()` calls in UI components
+- Update DashboardScreen.kt lines 33-34 to use dependency injection
+- Create database provider interface if needed for testing
+
+**Task 3.4.2: Fix PermissionManager Context Issue** [devops-architecture-engineer]
+**Story**: As the app, I need proper context passing so that PermissionManager doesn't crash on instantiation
+**Acceptance Criteria**:
+- GIVEN AppContainer needs to provide PermissionManager
+- WHEN PermissionManager is requested from AppContainer
+- THEN it MUST receive proper ComponentActivity context (not generic Context)
+- AND PermissionManager MUST NOT crash during instantiation
+- AND permission flows MUST work correctly from all screens
+- AND context casting MUST be safe and validated
+**Implementation Notes**:
+- Fix AppContainer line 65 context casting issue
+- Ensure MainActivity properly provides ComponentActivity context to AppContainer
+- Add context validation and error handling
+- Update PermissionManager to handle context properly
+
+**Task 3.4.3: Fix Test Package Naming** [qa-testing-specialist]  
+**Story**: As a developer, I need consistent package naming so that all tests pass and CI/CD works
+**Acceptance Criteria**:
+- GIVEN test files expect com.example.fitfoai package
+- WHEN tests are executed
+- THEN package names MUST match actual app package com.runningcoach.v2
+- AND all instrumented tests MUST pass
+- AND ExampleInstrumentedTest.kt line 22 MUST expect correct package
+- AND no package-related test failures MUST occur
+**Implementation Notes**:
+- Update all test files in androidTest directory  
+- Fix ExampleInstrumentedTest.kt to expect "com.runningcoach.v2" 
+- Update any test configuration files
+- Ensure build.gradle.kts applicationId matches test expectations
+
+**Task 3.4.4: Move Repository Creation from Composables** [android-ui-designer]
+**Story**: As a user, I need fast UI performance so that the app responds quickly without stutters
+**Acceptance Criteria**:
+- GIVEN repositories are currently created in Composables
+- WHEN screens are composed and recomposed
+- THEN repositories MUST be created in ViewModels or injected via AppContainer
+- AND no database/repository creation MUST happen in Composable functions
+- AND UI performance MUST improve with stable repository references  
+- AND memory leaks from repeated repository creation MUST be eliminated
+**Implementation Notes**:
+- Create ViewModels for screens that need repository access (DashboardScreen, etc.)
+- Move repository creation from Composables to ViewModels using AppContainer
+- Update DashboardScreen to use ViewModel pattern
+- Ensure proper Composable lifecycle management
+
+#### 🟡 P1 Tasks - Day 3-4 (Critical for Real Functionality)
+
+**Task 3.4.5: Fix Google Fit Permission Flow** [backend-ml-database-expert]
+**Story**: As a user, I want my Google Fit data automatically imported so that I see my real fitness information
+**Acceptance Criteria**:
+- GIVEN I complete Google Fit OAuth sign-in
+- WHEN sign-in succeeds
+- THEN the app MUST immediately request fitness data permissions
+- AND Google Fit permissions MUST be requested for steps, distance, heart rate, calories
+- AND successful permission grant MUST trigger data sync
+- AND permission denial MUST show clear error message to user
+**Implementation Notes**:
+- Fix GoogleFitService to request permissions after OAuth success
+- Add permission request flow to ConnectAppsScreen
+- Update Google Fit integration to handle permission-then-data flow
+- Add proper error handling and user feedback
+
+**Task 3.4.6: Connect Real User Data to UI** [android-ui-designer + backend-ml-database-expert]  
+**Story**: As a user, I want to see my actual profile data and fitness information so that the app shows real personalized content
+**Acceptance Criteria**:
+- GIVEN I have completed profile setup and Google Fit connection
+- WHEN I view Dashboard and Profile screens  
+- THEN I MUST see my real name, fitness data, and profile information (not placeholders)
+- AND sample/mock data MUST be replaced with actual user data from database
+- AND Google Fit data MUST display when available
+- AND graceful fallbacks MUST show when data is unavailable
+**Implementation Notes**:
+- Create UserViewModel to fetch real user data from database
+- Update DashboardScreen to show actual user name and fitness metrics
+- Replace all SampleCoaches/SampleTrainingData references with real data
+- Add data loading states and error handling
+- Implement proper date formatting for timestamps
+
+**Task 3.4.7: Add Error Feedback UI Components** [android-ui-designer]
+**Story**: As a user, I want clear feedback when something goes wrong so that I know what action to take  
+**Acceptance Criteria**:
+- GIVEN errors occur during Google Fit sync, data loading, or other operations
+- WHEN an error happens
+- THEN user MUST see clear, actionable error message
+- AND error messages MUST suggest specific solutions (retry, check connection, etc.)
+- AND errors MUST not crash the app or leave user in broken state
+- AND loading states MUST be shown during long operations
+**Implementation Notes**:
+- Create ErrorDialog and ErrorBanner components
+- Add error states to ViewModels with clear error messages  
+- Implement retry mechanisms for network operations
+- Add loading indicators for database operations
+- Create error message standards and copy
+
+**Task 3.4.8: Move Database Operations Off Main Thread** [backend-ml-database-expert]
+**Story**: As a user, I need a responsive app so that the UI doesn't freeze during data operations
+**Acceptance Criteria**:
+- GIVEN database operations are needed
+- WHEN data is read from or written to database
+- THEN operations MUST execute on background threads using Coroutines
+- AND main thread MUST never be blocked by database operations  
+- AND UI MUST remain responsive during data operations
+- AND proper loading states MUST be shown to user
+**Implementation Notes**:
+- Audit all database access for main thread usage
+- Wrap database operations in viewModelScope.launch
+- Use proper Dispatchers.IO for database operations
+- Add loading states for long-running database queries
+- Implement proper error handling for background operations
+
+#### 🔵 P2 Tasks - Day 5 (Architecture Improvements)
+
+**Task 3.4.9: Centralize HttpClient in AppContainer** [devops-architecture-engineer]
+**Story**: As a developer, I need consistent HTTP client configuration so that all network calls use the same setup
+**Acceptance Criteria**:
+- GIVEN multiple services need HTTP client access
+- WHEN services make network requests
+- THEN all services MUST use the same HttpClient instance from AppContainer
+- AND HttpClient configuration MUST be consistent across services
+- AND no duplicate HttpClient creation MUST occur
+- AND proper resource cleanup MUST happen on app shutdown
+**Implementation Notes**:
+- Ensure AppContainer HttpClient is used by all services
+- Remove any additional HttpClient creation in services
+- Add proper HttpClient configuration (timeouts, logging, etc.)
+- Implement cleanup in AppContainer.cleanup()
+
+**Task 3.4.10: Remove Unused OAuth Deep-Link Code** [devops-architecture-engineer]
+**Story**: As a maintainer, I need clean codebase so that unused code doesn't confuse developers
+**Acceptance Criteria**:
+- GIVEN OAuth deep-link handling code exists but is unused
+- WHEN code is reviewed for cleanup
+- THEN unused OAuth deep-link code MUST be removed
+- AND only functional OAuth code MUST remain
+- AND no dead code MUST exist in OAuth implementation
+- AND documentation MUST reflect actual OAuth implementation
+**Implementation Notes**:
+- Audit OAuth implementation for unused deep-link handling
+- Remove dead code while preserving functional OAuth flows
+- Update documentation to match actual implementation
+- Clean up any unused dependencies
+
+**Task 3.4.11: Expand Critical Path Integration Tests** [qa-testing-specialist]
+**Story**: As a developer, I need comprehensive tests so that critical user flows are verified automatically
+**Acceptance Criteria**:
+- GIVEN critical user flows exist (onboarding, Google Fit sync, profile setup)
+- WHEN integration tests are executed  
+- THEN end-to-end workflows MUST be tested and pass
+- AND Google Fit integration flow MUST have automated test coverage
+- AND permission flows MUST be tested
+- AND database data flow MUST be verified
+**Implementation Notes**:
+- Create integration test for complete onboarding flow
+- Add test for Google Fit connection and data sync
+- Test permission request flows  
+- Verify database consistency across app restart
+- Add performance tests for critical operations
+
+### 📊 Sprint Success Metrics
+
+**P0 Completion Criteria** (Must achieve by Day 2):
+- ✅ All tests pass (package naming fixed)
+- ✅ Single database instance across entire app  
+- ✅ PermissionManager instantiates without crashes
+- ✅ No repository creation in Composables
+
+**P1 Completion Criteria** (Must achieve by Day 4):  
+- ✅ Google Fit permissions requested after sign-in
+- ✅ Real user data displayed in UI (no placeholders)
+- ✅ Error feedback shown to users
+- ✅ No ANR risks from main thread database access
+
+**P2 Completion Criteria** (Nice-to-have by Day 5):
+- ✅ Centralized HttpClient configuration
+- ✅ Clean codebase (no dead OAuth code)
+- ✅ Integration test coverage >70%
+
+**Technical Quality Gates**:
+- All existing tests must continue to pass
+- No new crashes or ANRs introduced
+- App startup time <3 seconds (no regression)
+- Memory usage stable (no leaks)
+- Google Fit integration functionally complete
+
+**User Experience Validation**:
+- Complete onboarding flow works end-to-end
+- Dashboard shows real user data after setup
+- Error states provide clear guidance
+- App feels responsive during all operations
+
+### 🎯 Implementation Guidance by Agent Role
+
+#### backend-ml-database-expert Tasks:
+**Primary Focus**: Database architecture, Google Fit integration, data flow
+**Key Files to Modify**:
+- `/app/src/main/java/com/runningcoach/v2/di/AppModule.kt` - Fix database singleton
+- `/app/src/main/java/com/runningcoach/v2/data/local/FITFOAIDatabase.kt` - Update database access pattern
+- `/app/src/main/java/com/runningcoach/v2/data/service/GoogleFitService.kt` - Add permission flow
+- `/app/src/main/java/com/runningcoach/v2/data/repository/GoogleFitRepository.kt` - Fix data sync
+- `/app/src/main/java/com/runningcoach/v2/data/repository/UserRepository.kt` - Add real user data access
+
+**Critical Actions**:
+1. **Database Singleton Fix**: Remove all `FITFOAIDatabase.getDatabase()` calls, ensure AppContainer is single source
+2. **Google Fit Permissions**: After OAuth success in `GoogleFitService.signIn()`, immediately call `requestFitnessPermissions()`  
+3. **Real User Data**: Create methods to fetch actual user profile from database instead of hardcoded values
+4. **Background Threading**: Wrap all database operations in `withContext(Dispatchers.IO) { }`
+5. **Error Handling**: Add try-catch blocks with user-friendly error messages for all data operations
+
+#### android-ui-designer Tasks:
+**Primary Focus**: UI performance, ViewModels, error feedback, user experience
+**Key Files to Modify**:
+- `/app/src/main/java/com/runningcoach/v2/presentation/screen/dashboard/DashboardScreen.kt` - Remove repository creation
+- Create `/app/src/main/java/com/runningcoach/v2/presentation/screen/dashboard/DashboardViewModel.kt` - Add ViewModel
+- `/app/src/main/java/com/runningcoach/v2/presentation/components/ErrorDialog.kt` - Create error UI
+- `/app/src/main/java/com/runningcoach/v2/presentation/screen/profile/PersonalizeProfileScreen.kt` - Real data display
+
+**Critical Actions**:
+1. **ViewModel Creation**: Create DashboardViewModel that takes UserRepository and GoogleFitRepository via constructor
+2. **Remove Composable Database Access**: Replace lines 33-34 in DashboardScreen with ViewModel injection  
+3. **Real Data Display**: Update userName parameter to come from ViewModel user data
+4. **Error Components**: Create ErrorDialog, ErrorBanner, LoadingSpinner for consistent error handling
+5. **Loading States**: Add loading indicators for all data operations
+
+#### devops-architecture-engineer Tasks:
+**Primary Focus**: DI container, context management, HTTP client, build system
+**Key Files to Modify**:
+- `/app/src/main/java/com/runningcoach/v2/di/AppModule.kt` - Fix context casting and HttpClient
+- `/app/src/main/java/com/runningcoach/v2/MainActivity.kt` - Proper context passing
+- `/app/src/main/java/com/runningcoach/v2/data/service/PermissionManager.kt` - Context validation
+
+**Critical Actions**:
+1. **PermissionManager Context Fix**: Line 65 in AppContainer casts Context to ComponentActivity unsafely - fix this
+2. **MainActivity Update**: Ensure AppContainer gets ComponentActivity context, not generic Context
+3. **HttpClient Centralization**: Ensure all services use AppContainer httpClient, remove duplicates
+4. **Context Validation**: Add proper type checking and error handling for context casting
+5. **Resource Cleanup**: Implement proper cleanup in AppContainer.cleanup()
+
+#### qa-testing-specialist Tasks:  
+**Primary Focus**: Package naming, test infrastructure, integration tests
+**Key Files to Modify**:
+- `/app/src/androidTest/java/com/example/fitfoai/ExampleInstrumentedTest.kt` - Fix package name
+- Create integration tests for critical flows
+- Update test configuration files
+
+**Critical Actions**:
+1. **Package Name Fix**: Change line 22 in ExampleInstrumentedTest.kt from "com.example.fitfoai" to "com.runningcoach.v2"
+2. **Test Directory Cleanup**: Move/rename test packages to match com.runningcoach.v2 structure
+3. **Integration Tests**: Create end-to-end tests for onboarding → profile setup → Google Fit → dashboard flow
+4. **Permission Tests**: Test permission flows work correctly across all screens
+5. **Database Tests**: Verify single database instance and data consistency
+
+### ⚠️ Critical Risk Mitigation Strategies
+
+#### Risk: Database Migration During Sprint
+**Probability**: Medium | **Impact**: High
+**Mitigation**: 
+- Test database changes with app data backup/restore
+- Implement rollback strategy if migration fails  
+- Version control database schema changes carefully
+
+#### Risk: Google Fit API Rate Limits
+**Probability**: Low | **Impact**: Medium  
+**Mitigation**:
+- Implement exponential backoff for API calls
+- Cache data locally to reduce API requests
+- Add user messaging for rate limit scenarios
+
+#### Risk: Breaking Changes to Permission Flow
+**Probability**: Medium | **Impact**: High
+**Mitigation**:
+- Test permission flows on multiple Android versions (10, 11, 12, 13, 14)
+- Maintain backwards compatibility
+- Add graceful degradation for denied permissions
+
+#### Risk: Performance Regression from Architecture Changes
+**Probability**: Medium | **Impact**: Medium
+**Mitigation**:
+- Profile app performance before and after changes
+- Run memory leak detection tools
+- Monitor startup time and UI responsiveness
+
+### 📋 Sprint Execution Protocol
+
+#### Daily Standup Focus:
+**Day 1-2**: P0 blocker resolution progress, any blocking dependencies between agents
+**Day 3-4**: P1 real data integration, user testing of critical flows  
+**Day 5**: P2 architecture cleanup, final testing and validation
+
+#### Definition of Ready (Before Starting):
+- [ ] All agents understand their assigned tasks
+- [ ] Development environment set up and tested
+- [ ] Backup strategy in place for database changes
+- [ ] Test devices available for permission testing
+
+#### Definition of Done (Sprint Complete):
+- [ ] All P0 tasks completed and verified
+- [ ] All P1 tasks completed with user validation
+- [ ] P2 tasks completed (or documented for next sprint)
+- [ ] No regression in existing functionality
+- [ ] Integration tests pass
+- [ ] Performance meets quality gates
+- [ ] Documentation updated
+
+This Sprint 3.4 plan addresses the most critical architectural issues blocking FITFOAI's production readiness, with clear prioritization, detailed acceptance criteria, and specific implementation guidance for each specialized agent role.
 
 ### Phase 4: AI Enhancement 📋 PLANNED
 #### Sprint 4.1: Vertex AI Fitness Coach

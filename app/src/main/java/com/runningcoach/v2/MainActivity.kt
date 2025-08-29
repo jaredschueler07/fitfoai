@@ -104,25 +104,7 @@ class MainActivity : ComponentActivity() {
                         println("Spotify OAuth error: $error")
                     }
                 }
-                "googlefit-callback" -> {
-                    val authCode = uri.getQueryParameter("code")
-                    val error = uri.getQueryParameter("error")
-                    
-                    if (authCode != null) {
-                        // Handle successful Google Fit OAuth
-                        CoroutineScope(Dispatchers.Main).launch {
-                            try {
-                                // Handle Google Fit OAuth - this is now handled by activity result
-                                println("Google Fit OAuth callback received")
-                            } catch (e: Exception) {
-                                println("Google Fit OAuth exception: ${e.message}")
-                            }
-                        }
-                    } else if (error != null) {
-                        // Handle OAuth error
-                        println("Google Fit OAuth error: $error")
-                    }
-                }
+                // Note: Google Fit uses Sign-In + Permissions, not OAuth callbacks
             }
         }
     }
@@ -219,7 +201,6 @@ fun RunningCoachApp() {
             // Main App Screens (with bottom navigation)
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
-                    userName = "Runner", // TODO: Get from user profile data
                     onStartRun = {
                         navController.navigate(Screen.RunTracking.route)
                     },
@@ -233,7 +214,14 @@ fun RunningCoachApp() {
             }
             
             composable(Screen.AICoach.route) {
-                AICoachScreen()
+                val context = LocalContext.current
+                val app = context.applicationContext as RunningCoachApplication
+                val viewModel = remember {
+                    com.runningcoach.v2.presentation.screen.aicoach.AICoachViewModel(
+                        app.appContainer.aiChatAgent
+                    )
+                }
+                AICoachScreen(viewModel = viewModel)
             }
             
             composable(Screen.Progress.route) {
@@ -268,6 +256,15 @@ fun RunningCoachApp() {
             // API Testing Screen (for debugging)
             composable(Screen.APITesting.route) {
                 APITestingScreen()
+            }
+            
+            // Google Fit Test Screen
+            composable(Screen.GoogleFitTest.route) {
+                com.runningcoach.v2.presentation.screen.apitesting.GoogleFitTestScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
             }
             
             // Permission Flow Screen
