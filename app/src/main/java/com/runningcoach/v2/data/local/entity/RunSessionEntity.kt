@@ -23,7 +23,8 @@ import androidx.room.PrimaryKey
         Index(value = ["userId"]),
         Index(value = ["startTime"]),
         Index(value = ["googleFitSessionId"], unique = true),
-        Index(value = ["syncedWithGoogleFit"])
+        Index(value = ["syncedWithGoogleFit"]),
+        Index(value = ["source"])
     ]
 )
 data class RunSessionEntity(
@@ -77,6 +78,9 @@ data class RunSessionEntity(
     // Training plan association
     val trainingPlanId: Long? = null,
     val workoutType: String? = null, // EASY, TEMPO, INTERVAL, LONG, RECOVERY
+    
+    // Data source tracking
+    val source: DataSource = DataSource.FITFOAI,
     
     // Google Fit sync
     val googleFitSessionId: String? = null,
