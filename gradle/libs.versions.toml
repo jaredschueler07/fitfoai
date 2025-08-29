@@ -43,9 +43,16 @@ playServicesFitness = "21.1.0"
 playServicesLocation = "21.0.1"
 playServicesAuthApiPhone = "18.0.1"
 
+# Health Connect
+healthConnect = "1.1.0-alpha10"
+
 [libraries]
 # Core Android
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+
+# Spotify Android SDK
+spotify-auth = { group = "com.spotify.android", name = "auth", version = "2.1.0" }
+spotify-app-remote = { group = "com.spotify.protocol", name = "spotify-app-remote", version = "0.8.0" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 
@@ -100,6 +107,9 @@ google-play-services-auth = { group = "com.google.android.gms", name = "play-ser
 google-play-services-fitness = { group = "com.google.android.gms", name = "play-services-fitness", version.ref = "playServicesFitness" }
 google-play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 google-play-services-auth-api-phone = { group = "com.google.android.gms", name = "play-services-auth-api-phone", version.ref = "playServicesAuthApiPhone" }
+
+# Health Connect
+health-connect-client = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

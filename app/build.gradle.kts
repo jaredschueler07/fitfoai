@@ -160,6 +160,9 @@ dependencies {
     implementation(libs.google.play.services.location)
     implementation(libs.google.play.services.auth.api.phone)
     
+    // Health Connect
+    implementation(libs.health.connect.client)
+    
     // Audio & Media for Voice Coaching
     implementation("androidx.media:media:1.7.0")
     implementation("androidx.media3:media3-exoplayer:1.2.0")
@@ -168,6 +171,10 @@ dependencies {
     
     // HTTP Client for ElevenLabs API (using existing Ktor)
     // ElevenLabs API integration handled via existing Ktor client
+
+    // Spotify Android SDK
+    implementation(libs.spotify.auth)
+    implementation(libs.spotify.app.remote)
 
     // Testing
     testImplementation(libs.junit)
