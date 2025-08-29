@@ -36,4 +36,14 @@ interface GoogleFitDailySummaryDao {
     
     @Query("SELECT COUNT(*) FROM google_fit_daily_summary WHERE userId = :userId")
     suspend fun getSummaryCount(userId: Long): Int
+    
+    // Additional methods for GoogleFitManager
+    @Query("SELECT * FROM google_fit_daily_summary WHERE userId = :userId ORDER BY date DESC")
+    fun getUserDailySummaries(userId: Long): Flow<List<GoogleFitDailySummaryEntity>>
+    
+    @Query("SELECT * FROM google_fit_daily_summary WHERE userId = :userId AND date >= :startTime AND date <= :endTime ORDER BY date ASC")
+    suspend fun getDailySummariesForDateRange(userId: Long, startTime: Long, endTime: Long): List<GoogleFitDailySummaryEntity>
+    
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateDailySummary(summary: GoogleFitDailySummaryEntity)
 }

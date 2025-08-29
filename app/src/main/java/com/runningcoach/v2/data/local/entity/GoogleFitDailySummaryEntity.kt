@@ -34,8 +34,12 @@ data class GoogleFitDailySummaryEntity(
     
     // Heart rate summary
     val restingHeartRate: Int? = null,
-    val averageHeartRate: Float? = null,
-    val maxHeartRate: Int? = null,
+    val avgHeartRate: Float? = null,
+    val maxHeartRate: Float? = null,
+    val minHeartRate: Float? = null,
+    
+    // Additional metrics
+    val heartPoints: Int? = null,
     
     // Body measurements
     val weight: Float? = null, // in kg
