@@ -27,7 +27,7 @@ class ChatContextProvider(
             val distanceKm = (latest.distance ?: 0f) / 1000f
             val distanceStr = String.format("%.2f km", distanceKm)
             val calories = latest.calories ?: 0
-            val hr = latest.averageHeartRate?.let { "avg HR ${it} bpm" } ?: ""
+            val hr = latest.avgHeartRate?.let { "avg HR ${it.toInt()} bpm" } ?: ""
             listOf(
                 "Today: $steps steps",
                 "Distance: $distanceStr",

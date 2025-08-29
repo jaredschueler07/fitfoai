@@ -100,6 +100,9 @@ interface RunSessionDao {
     @Query("DELETE FROM run_sessions WHERE userId = :userId")
     suspend fun deleteAllUserSessions(userId: Long)
     
+    @Query("SELECT * FROM run_sessions WHERE userId = :userId AND endTime IS NULL ORDER BY startTime DESC LIMIT 1")
+    suspend fun getActiveSession(userId: Long): RunSessionEntity?
+    
     // Keep existing compatibility methods
     @Query("SELECT * FROM run_sessions WHERE userId = :userId ORDER BY startTime DESC")
     fun getRunSessionsByUser(userId: Long): Flow<List<RunSessionEntity>>

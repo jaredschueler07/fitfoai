@@ -288,7 +288,7 @@ fun DashboardScreen(
                                 }
                                 
                                 // Heart Rate (if available)
-                                uiState.fitnessData?.averageHeartRate?.let { heartRate ->
+                                uiState.fitnessData?.avgHeartRate?.let { heartRate ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,

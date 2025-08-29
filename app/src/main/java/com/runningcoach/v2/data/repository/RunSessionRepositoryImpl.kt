@@ -53,7 +53,8 @@ class RunSessionRepositoryImpl(
             val sessionEntity = RunSessionEntity(
                 userId = userId,
                 startTime = currentTime,
-                isCompleted = false,
+                duration = 0, // Starting duration
+                distance = 0f, // Starting distance
                 createdAt = currentTime
             )
             
@@ -92,12 +93,11 @@ class RunSessionRepositoryImpl(
                 endTime = endTime,
                 duration = runMetrics.duration * 1000, // Convert seconds to milliseconds
                 distance = runMetrics.distance,
-                averagePace = runMetrics.averagePace,
-                averageHeartRate = runMetrics.averageHeartRate,
+                avgPace = runMetrics.averagePace,
+                avgHeartRate = runMetrics.averageHeartRate,
                 maxHeartRate = runMetrics.maxHeartRate,
-                caloriesBurned = runMetrics.caloriesBurned,
-                route = routeJson,
-                isCompleted = true
+                calories = runMetrics.caloriesBurned,
+                route = routeJson
             )
             
             runSessionDao.updateRunSession(updatedSession)
@@ -170,7 +170,7 @@ class RunSessionRepositoryImpl(
 
     override suspend fun getActiveSession(userId: Long): Result<Long?> {
         return try {
-            val activeSession = runSessionDao.getCurrentActiveSession(userId)
+            val activeSession = runSessionDao.getActiveSession(userId)
             Result.success(activeSession?.id)
         } catch (e: Exception) {
             Result.failure(e)
@@ -196,13 +196,13 @@ class RunSessionRepositoryImpl(
                         endTime = entity.endTime,
                         duration = entity.duration,
                         distance = entity.distance,
-                        averagePace = entity.averagePace,
-                        averageHeartRate = entity.averageHeartRate,
+                        averagePace = entity.avgPace,
+                        averageHeartRate = entity.avgHeartRate,
                         maxHeartRate = entity.maxHeartRate,
-                        caloriesBurned = entity.caloriesBurned,
+                        caloriesBurned = entity.calories,
                         routePoints = routePoints,
                         notes = entity.notes,
-                        isCompleted = entity.isCompleted,
+                        isCompleted = entity.endTime != null,
                         createdAt = entity.createdAt
                     )
                 }
