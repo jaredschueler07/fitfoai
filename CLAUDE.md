@@ -196,6 +196,14 @@ com.runningcoach.v2/
 - **DI**: `aiChatAgent` uses GPT/Gemini per `AI_PROVIDER`; voice pipeline remains Gemini-backed.
 - **Config**: Set `AI_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL` in `local.properties`.
 
+### Spotify Integration (In Progress)
+- **Spotify SDK Integrated**: Native Android SDK for seamless in-app control.
+- **UI Controls**: Play/pause and playlist selection on `RunTrackingScreen`.
+- **Audio Ducking**: Music volume lowers during voice coaching and restores afterward.
+- **Workout-Aligned Playlist Generation**: Automated creation of BPM-matched playlists based on workout segments.
+- **Track Data Caching**: Room database caching for Spotify track BPM and duration to optimize API usage.
+- **Background Generation**: `WorkManager` integration for offloading playlist generation to a background thread.
+
 ### UI Components
 - **AppButton**: Consistent button styling across the app
 - **AppCard**: Card-based layout system with athletic blue theme
@@ -210,13 +218,14 @@ com.runningcoach.v2/
 ### Current Status - Production Ready (85%)
 - **P0 Blockers**: All resolved - background GPS, permissions, session recovery
 - **Voice Coaching**: Complete with 4 AI personalities and smart triggers
+- **Spotify Core Integration**: Core playback control, audio ducking, and intelligent playlist generation are implemented.
 - **Testing**: 159 comprehensive tests with 85%+ coverage on critical components
 - **Build System**: Production-ready with ProGuard/R8 optimization
 
 ### Current Limitations (15% remaining)
-- **Minor compilation fixes**: Some service implementations need final method completions
-- **Hilt Dependency Injection**: Temporarily disabled, using manual DI (AppModule pattern)
-- **Spotify Integration**: Planned for Sprint 3.3 (OAuth, BPM matching, playlist AI)
+- **Minor compilation fixes**: Some service implementations need final method completions.
+- **Hilt Dependency Injection**: Temporarily disabled, using manual DI (AppModule pattern).
+- **Spotify Integration Refinements**: Further UI/UX improvements, comprehensive error handling, and advanced playlist generation features (e.g., user preferences for genres).
 
 ### Technology Stack
 - **Build System**: Gradle with version catalogs (`gradle/libs.versions.toml`)
@@ -251,10 +260,10 @@ com.runningcoach.v2/
 - `project/SPRINT_3.3_SPOTIFY_INTEGRATION_PLAN.md`: Next sprint planning
 
 ### Next Development Phase - Sprint 3.3
-- **Spotify OAuth Integration**: Complete authentication and token management
-- **BPM Cadence Matching**: Music tempo analysis and cadence synchronization  
-- **AI Playlist Recommendations**: Intelligent music suggestions based on workout type
-- **Voice + Music Integration**: Seamless audio ducking and coaching timing
+- **Spotify Integration Refinements**: Further UI/UX improvements, comprehensive error handling, and advanced playlist generation features (e.g., user preferences for genres).
+- **BPM Cadence Matching**: Music tempo analysis and cadence synchronization (already started).
+- **AI Playlist Recommendations**: Intelligent music suggestions based on workout type (already started).
+- **Voice + Music Integration**: Seamless audio ducking and coaching timing (already started).
 - **Final Production Polish**: Complete app store submission preparation
 
 ## Common Development Patterns
