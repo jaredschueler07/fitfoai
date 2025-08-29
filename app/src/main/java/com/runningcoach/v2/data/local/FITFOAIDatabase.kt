@@ -20,9 +20,10 @@ import com.runningcoach.v2.data.local.converter.Converters
         GoogleFitDailySummaryEntity::class,
         ConnectedAppEntity::class,
         VoiceLineEntity::class,
-        CoachPersonalityEntity::class
+        CoachPersonalityEntity::class,
+        SpotifyTrackCacheEntity::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -36,51 +37,17 @@ abstract class FITFOAIDatabase : RoomDatabase() {
     abstract fun connectedAppDao(): ConnectedAppDao
     abstract fun voiceLineDao(): VoiceLineDao
     abstract fun coachPersonalityDao(): CoachPersonalityDao
+    abstract fun spotifyTrackCacheDao(): SpotifyTrackCacheDao
     
     companion object {
         @Volatile
         private var INSTANCE: FITFOAIDatabase? = null
         
-        /**
-         * Migration from version 3 to 4: Add voice coaching entities
-         * Adds VoiceLineEntity and CoachPersonalityEntity tables
-         */
-        val MIGRATION_3_4 = object : Migration(3, 4) {
+        // ... (previous migrations)
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Create VoiceLineEntity table
-                database.execSQL("""
-                    CREATE TABLE IF NOT EXISTS `voice_lines` (
-                        `id` TEXT NOT NULL PRIMARY KEY,
-                        `coachId` TEXT NOT NULL,
-                        `contextType` TEXT NOT NULL,
-                        `text` TEXT NOT NULL,
-                        `audioFilePath` TEXT,
-                        `isPreloaded` INTEGER NOT NULL DEFAULT 0,
-                        `lastUsed` INTEGER NOT NULL DEFAULT 0,
-                        `useCount` INTEGER NOT NULL DEFAULT 0,
-                        `createdAt` INTEGER NOT NULL
-                    )
-                """)
-                
-                // Create CoachPersonalityEntity table
-                database.execSQL("""
-                    CREATE TABLE IF NOT EXISTS `coach_personalities` (
-                        `id` TEXT NOT NULL PRIMARY KEY,
-                        `name` TEXT NOT NULL,
-                        `description` TEXT NOT NULL,
-                        `voiceId` TEXT NOT NULL,
-                        `motivationalStyle` TEXT NOT NULL,
-                        `coachingFrequency` TEXT NOT NULL,
-                        `personalityTraits` TEXT NOT NULL,
-                        `isActive` INTEGER NOT NULL DEFAULT 0,
-                        `createdAt` INTEGER NOT NULL
-                    )
-                """)
-                
-                // Create indices for better performance
-                database.execSQL("CREATE INDEX IF NOT EXISTS `index_voice_lines_coachId` ON `voice_lines` (`coachId`)")
-                database.execSQL("CREATE INDEX IF NOT EXISTS `index_voice_lines_contextType` ON `voice_lines` (`contextType`)")
-                database.execSQL("CREATE INDEX IF NOT EXISTS `index_coach_personalities_isActive` ON `coach_personalities` (`isActive`)")
+                database.execSQL("ALTER TABLE `spotify_track_cache` ADD COLUMN `durationMs` INTEGER NOT NULL DEFAULT 0")
             }
         }
         
@@ -91,7 +58,7 @@ abstract class FITFOAIDatabase : RoomDatabase() {
                     FITFOAIDatabase::class.java,
                     "fitfoai_database"
                 )
-                .addMigrations(MIGRATION_3_4)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 INSTANCE = instance
                 instance

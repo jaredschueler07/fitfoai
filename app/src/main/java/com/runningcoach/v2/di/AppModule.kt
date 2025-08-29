@@ -23,8 +23,8 @@ import io.ktor.client.*
 import io.ktor.client.engine.android.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import io.ktor.serialization.kotlinx.json.json
 
 /**
  * Manual dependency injection container.
@@ -34,8 +34,8 @@ import kotlinx.serialization.json.Json
 class AppContainer(private val context: Context) {
 
     // TODO: Replace with actual values from BuildConfig or encrypted local.properties
-    private val spotifyClientId: String = "YOUR_SPOTIFY_CLIENT_ID_FROM_BUILDCONFIG"
-    private val spotifyRedirectUri: String = "YOUR_SPOTIFY_REDIRECT_URI_FROM_BUILDCONFIG"
+    private val spotifyClientId: String = BuildConfig.SPOTIFY_CLIENT_ID
+    private val spotifyRedirectUri: String = BuildConfig.SPOTIFY_REDIRECT_URI
 
     // HttpClient for network services
     private val httpClient: HttpClient by lazy {
@@ -60,6 +60,10 @@ class AppContainer(private val context: Context) {
         database.runSessionDao()
     }
 
+    private val spotifyTrackCacheDao by lazy {
+        database.spotifyTrackCacheDao()
+    }
+
     private val locationService: LocationService by lazy {
         LocationService(context)
     }
@@ -67,9 +71,6 @@ class AppContainer(private val context: Context) {
     private val sessionRecoveryManager: SessionRecoveryManager by lazy {
         SessionRecoveryManager(context)
     }
-    
-    // [ARCH-CHANGE] PermissionManager removed from AppContainer
-    // Create PermissionManager at Activity/Screen level to avoid casting issues
     
     // Audio Management
     private val audioFocusManager: AudioFocusManager by lazy {
@@ -100,8 +101,6 @@ class AppContainer(private val context: Context) {
     }
     
     // Fitness Coach Agents
-    // - Chat agent: GPT (or provider configured)
-    // - Voice agent: Gemini-backed, for coaching line generation when needed
     private val chatContextProvider: ChatContextProvider by lazy { ChatContextProvider(database) }
     private val userDataContextSource by lazy { UserDataContextSource(chatContextProvider) }
     private val kbContextSource by lazy { KnowledgeBaseContextSource(context) }
@@ -115,7 +114,7 @@ class AppContainer(private val context: Context) {
     
     // Voice Coaching Manager
     val voiceCoachingManager: VoiceCoachingManager by lazy {
-        VoiceCoachingManager(context, database, elevenLabsService, aiVoiceAgent)
+        VoiceCoachingManager(context, database, elevenLabsService, aiVoiceAgent, audioFocusManager)
     }
     
     // Background Location Service (dependency for location tracking)
@@ -161,16 +160,24 @@ class AppContainer(private val context: Context) {
         TokenStorageManagerImpl(context)
     }
 
-    private val spotifyService: SpotifyService by lazy {
-        SpotifyService()
-    }
-
     val spotifyAuthRepository: SpotifyAuthRepository by lazy {
         SpotifyAuthRepositoryImpl(spotifyService, tokenStorageManager, spotifyClientId, spotifyRedirectUri)
     }
 
+    val spotifyService: SpotifyService by lazy {
+        SpotifyService(context, spotifyAuthRepository, spotifyTrackCacheDao, httpClient)
+    }
+
     val authenticateSpotifyUseCase: AuthenticateSpotifyUseCase by lazy {
         AuthenticateSpotifyUseCase(spotifyAuthRepository, spotifyRedirectUri)
+    }
+
+    val workoutParser: WorkoutParser by lazy {
+        WorkoutParser()
+    }
+
+    val playlistGenerator: PlaylistGenerator by lazy {
+        PlaylistGenerator()
     }
     
     val runSessionManager: RunSessionManager by lazy {

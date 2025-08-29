@@ -13,11 +13,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.launch
+import com.runningcoach.v2.data.service.APIConnectionManager
+import com.runningcoach.v2.data.service.SpotifyService
 import com.runningcoach.v2.domain.model.AppType
 import com.runningcoach.v2.domain.model.ConnectedApp
 import com.runningcoach.v2.presentation.components.AppCard
@@ -35,29 +38,22 @@ fun ConnectAppsScreen(
     modifier: Modifier = Modifier,
     onComplete: (List<ConnectedApp>) -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    
-    // API Connection Manager
-    val apiConnectionManager = remember { 
-        try {
-            com.runningcoach.v2.data.service.APIConnectionManager(context)
-        } catch (e: Exception) {
-            android.util.Log.e("ConnectAppsScreen", "Error creating APIConnectionManager", e)
-            null
-        }
-    }
-    
+
+    // Services
+    val apiConnectionManager = remember { APIConnectionManager(context) }
+    val spotifyService = remember { SpotifyService(context) }
+
     var connectedApps by remember { mutableStateOf(emptyList<ConnectedApp>()) }
     var connectingApp by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
-    
+
     // Observe connection states
-    val googleFitConnected by (apiConnectionManager?.googleFitConnected ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
-    val spotifyConnected by (apiConnectionManager?.spotifyConnected ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
-    val connectionStatus by (apiConnectionManager?.connectionStatus ?: kotlinx.coroutines.flow.MutableStateFlow("Error: Connection manager not initialized")).collectAsState()
-    
+    val googleFitConnected by apiConnectionManager.googleFitConnected.collectAsState()
+    val spotifyConnected by spotifyService.isConnected.collectAsState()
+
     // Activity result launcher for Google Sign-In
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -65,97 +61,50 @@ fun ConnectAppsScreen(
         try {
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             val account = task.getResult(ApiException::class.java)
-            
-            android.util.Log.i("ConnectAppsScreen", "Google Sign-In successful: ${account?.email}")
-            
-            // Handle successful sign-in
-            apiConnectionManager?.let { manager ->
-                // Use coroutine scope to handle the async operations
-                scope.launch {
-                    try {
-                        // Handle the Google Sign-In result and update connection status
-                        manager.handleGoogleSignInResult()
-                        // After sign-in, request Google Fit Fitness permissions if needed
-                        val activity = context as? android.app.Activity
-                        if (activity != null) {
-                            manager.requestGoogleFitPermissions(activity)
-                            successMessage = "Google Fit connected successfully!"
-                        } else {
-                            android.util.Log.w("ConnectAppsScreen", "Unable to request Fitness permissions: context is not an Activity")
-                            errorMessage = "Unable to request fitness permissions. Please try again."
-                        }
-                        
-                        android.util.Log.i("ConnectAppsScreen", "Google Sign-In handling complete")
-                    } catch (e: Exception) {
-                        android.util.Log.e("ConnectAppsScreen", "Error handling Google Sign-In result", e)
-                        errorMessage = "Failed to complete Google Fit connection. Please try again."
-                    } finally {
-                        connectingApp = null
+
+            scope.launch {
+                try {
+                    manager.handleGoogleSignInResult()
+                    val activity = context as? android.app.Activity
+                    if (activity != null) {
+                        manager.requestGoogleFitPermissions(activity)
+                        successMessage = "Google Fit connected successfully!"
+                    } else {
+                        errorMessage = "Unable to request fitness permissions."
                     }
+                } catch (e: Exception) {
+                    errorMessage = "Failed to complete Google Fit connection."
+                } finally {
+                    connectingApp = null
                 }
-            } ?: run {
-                connectingApp = null
-                errorMessage = "Connection service unavailable. Please restart the app."
             }
-            
         } catch (e: ApiException) {
-            android.util.Log.e("ConnectAppsScreen", "Google Sign-In failed", e)
             connectingApp = null
-            errorMessage = when (e.statusCode) {
-                12501 -> "Google Sign-In was cancelled"
-                12502 -> "Network error. Please check your connection."
-                else -> "Google Sign-In failed. Please try again."
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("ConnectAppsScreen", "Unexpected error during Google Sign-In", e)
-            connectingApp = null
-            errorMessage = "An unexpected error occurred. Please try again."
+            errorMessage = "Google Sign-In failed. Please try again."
         }
     }
 
-    // Update connectedApps based on actual connection states
+    // Update connectedApps list based on observed states
     LaunchedEffect(googleFitConnected, spotifyConnected) {
         val apps = mutableListOf<ConnectedApp>()
         if (googleFitConnected) {
-            apps.add(ConnectedApp(
-                id = "google_fit",
-                name = "Google Fit",
-                type = AppType.GOOGLE_FIT,
-                isConnected = true
-            ))
-            // Clear connecting state when successfully connected
-            if (connectingApp == "google_fit") {
-                connectingApp = null
-            }
+            apps.add(ConnectedApp(id = "google_fit", name = "Google Fit", type = AppType.GOOGLE_FIT, isConnected = true))
         }
         if (spotifyConnected) {
-            apps.add(ConnectedApp(
-                id = "spotify",
-                name = "Spotify",
-                type = AppType.SPOTIFY,
-                isConnected = true
-            ))
-            // Clear connecting state when successfully connected
-            if (connectingApp == "spotify") {
-                connectingApp = null
-            }
+            apps.add(ConnectedApp(id = "spotify", name = "Spotify", type = AppType.SPOTIFY, isConnected = true))
         }
         connectedApps = apps
+
+        // Clear connecting state on successful connection
+        if (googleFitConnected && connectingApp == "google_fit") connectingApp = null
+        if (spotifyConnected && connectingApp == "spotify") connectingApp = null
     }
-    
+
     val availableApps = listOf(
-        ConnectedApp(
-            id = "google_fit",
-            name = "Google Fit",
-            type = AppType.GOOGLE_FIT
-        ),
-        ConnectedApp(
-            id = "spotify",
-            name = "Spotify",
-            type = AppType.SPOTIFY
-        )
+        ConnectedApp(id = "google_fit", name = "Google Fit", type = AppType.GOOGLE_FIT),
+        ConnectedApp(id = "spotify", name = "Spotify", type = AppType.SPOTIFY)
     )
-    
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -170,30 +119,14 @@ fun ConnectAppsScreen(
             color = AppColors.OnBackground,
             modifier = Modifier.padding(top = 40.dp, bottom = 8.dp)
         )
-        
+
         Text(
-            text = "Connect your fitness and music apps to personalize your training experience",
+            text = "Connect your fitness and music apps to personalize your training experience.",
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.Neutral400,
             modifier = Modifier.padding(bottom = 32.dp)
         )
-        
-        // Connection status message
-        connectionStatus?.let { status ->
-            AppCard(
-                modifier = Modifier.fillMaxWidth(),
-                backgroundColor = AppColors.Primary.copy(alpha = 0.1f)
-            ) {
-                Text(
-                    text = status,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.Primary,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-        
+
         // Apps list
         LazyColumn(
             modifier = Modifier.weight(1f),
@@ -208,94 +141,52 @@ fun ConnectAppsScreen(
                         else -> false
                     },
                     isConnecting = connectingApp == app.id,
-                    onToggleConnection = { toggleApp ->
-                        when (toggleApp.id) {
+                    onToggleConnection = {
+                        when (it.id) {
                             "google_fit" -> {
-                                apiConnectionManager?.let { manager ->
-                                    if (googleFitConnected) {
-                                        manager.disconnectGoogleFit()
-                                    } else {
-                                        connectingApp = "google_fit"
-                                        try {
-                                            // Start Google Fit connection
-                                            val intent = manager.connectGoogleFit()
-                                            if (intent.action != null || intent.component != null) {
-                                                googleSignInLauncher.launch(intent)
-                                            } else {
-                                                // If no intent is returned, user might already be connected
-                                                manager.testGoogleFitConnection()
-                                                connectingApp = null
-                                            }
-                                        } catch (e: Exception) {
-                                            // Handle any errors during connection
-                                            android.util.Log.e("ConnectAppsScreen", "Error connecting to Google Fit", e)
-                                            connectingApp = null
-                                            errorMessage = "Failed to start Google Fit connection. Please try again."
-                                        }
-                                    }
-                                } ?: run {
-                                    android.util.Log.e("ConnectAppsScreen", "APIConnectionManager is null")
+                                if (googleFitConnected) {
+                                    apiConnectionManager.disconnectGoogleFit()
+                                } else {
+                                    connectingApp = "google_fit"
+                                    val intent = apiConnectionManager.connectGoogleFit()
+                                    googleSignInLauncher.launch(intent)
                                 }
                             }
                             "spotify" -> {
-                                apiConnectionManager?.let { manager ->
-                                    if (spotifyConnected) {
-                                        manager.disconnectSpotify()
-                                    } else {
-                                        connectingApp = "spotify"
-                                        try {
-                                            // Start OAuth flow
-                                            val intent = manager.connectSpotify()
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            // Handle any errors during connection
-                                            android.util.Log.e("ConnectAppsScreen", "Error connecting to Spotify", e)
-                                            connectingApp = null
-                                            errorMessage = "Failed to start Spotify connection. Please try again."
-                                        }
-                                    }
-                                } ?: run {
-                                    android.util.Log.e("ConnectAppsScreen", "APIConnectionManager is null")
-                                 }
+                                if (spotifyConnected) {
+                                    spotifyService.disconnect()
+                                } else {
+                                    connectingApp = "spotify"
+                                    spotifyService.connect()
+                                }
                             }
                         }
                     }
                 )
             }
         }
-        
+
         // Bottom buttons
-        Column(
-            modifier = Modifier.padding(top = 24.dp)
-        ) {
+        Column(modifier = Modifier.padding(top = 24.dp)) {
             if (connectedApps.isNotEmpty()) {
                 PrimaryButton(
                     text = "Continue",
                     onClick = { onComplete(connectedApps) }
                 )
-                
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            
             SecondaryButton(
                 text = "Skip for now",
                 onClick = { onComplete(emptyList()) }
             )
         }
-        
-        // Error and Success Snackbars
+
+        // Snackbars
         ErrorSnackbar(
             message = errorMessage ?: "",
             isVisible = errorMessage != null,
-            onDismiss = { errorMessage = null },
-            actionLabel = "Retry",
-            onActionClick = {
-                errorMessage = null
-                // Clear any connecting state to allow retry
-                connectingApp = null
-            }
+            onDismiss = { errorMessage = null }
         )
-        
         SuccessSnackbar(
             message = successMessage ?: "",
             isVisible = successMessage != null,
@@ -323,21 +214,13 @@ private fun AppConnectionCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 // App icon
                 when (app.type) {
-                    AppType.GOOGLE_FIT -> GoogleFitIcon(
-                        tint = if (isConnected) AppColors.Primary else AppColors.OnSurface
-                    )
-                    AppType.SPOTIFY -> SpotifyIcon(
-                        tint = if (isConnected) AppColors.Primary else AppColors.OnSurface
-                    )
+                    AppType.GOOGLE_FIT -> GoogleFitIcon(tint = if (isConnected) AppColors.Primary else AppColors.OnSurface)
+                    AppType.SPOTIFY -> SpotifyIcon(tint = if (isConnected) AppColors.Primary else AppColors.OnSurface)
                 }
-                
                 Spacer(modifier = Modifier.width(16.dp))
-                
                 Column {
                     Text(
                         text = app.name,
@@ -345,7 +228,6 @@ private fun AppConnectionCard(
                         fontWeight = FontWeight.Medium,
                         color = if (isConnected) AppColors.Primary else AppColors.OnSurface
                     )
-                    
                     Text(
                         text = when {
                             isConnected -> "Connected"
@@ -361,10 +243,7 @@ private fun AppConnectionCard(
                     )
                 }
             }
-            
-            ChevronRightIcon(
-                tint = if (isConnected) AppColors.Primary else AppColors.Neutral500
-            )
+            ChevronRightIcon(tint = if (isConnected) AppColors.Primary else AppColors.Neutral500)
         }
     }
 }
