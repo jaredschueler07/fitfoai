@@ -2,6 +2,7 @@ package com.runningcoach.v2
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -37,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.repository.UserRepository
 
@@ -48,9 +50,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
         // Initialize API connection manager
         apiConnectionManager = com.runningcoach.v2.data.service.APIConnectionManager(this)
+
+        // Log build/runtime info once on startup for quick verification
+        try {
+            Log.i(
+                "BuildInfo",
+                "appId=${BuildConfig.APPLICATION_ID} version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) " +
+                        "type=${BuildConfig.BUILD_TYPE} ai=${BuildConfig.AI_PROVIDER} sha=${BuildConfig.GIT_SHA}"
+            )
+        } catch (_: Throwable) { /* no-op */ }
         
         // Handle OAuth callback if this activity was launched by a deep link
         handleOAuthCallback(intent)
@@ -146,21 +157,22 @@ fun RunningCoachApp() {
         Screen.Profile.route
     )
     
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            if (currentRoute in screensWithBottomNav) {
-                AppBottomNavigation(navController = navController)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            bottomBar = {
+                if (currentRoute in screensWithBottomNav) {
+                    AppBottomNavigation(navController = navController)
+                }
             }
-        }
-    ) { innerPadding ->
-        // Only render NavHost after start destination is determined
-        startDestination?.let { destination ->
-            NavHost(
-                navController = navController,
-                startDestination = destination,
-                modifier = Modifier.padding(innerPadding)
-            ) {
+        ) { innerPadding ->
+            // Only render NavHost after start destination is determined
+            startDestination?.let { destination ->
+                NavHost(
+                    navController = navController,
+                    startDestination = destination,
+                    modifier = Modifier.padding(innerPadding)
+                ) {
             // Onboarding Flow
             composable(Screen.Welcome.route) {
                 WelcomeScreen(
@@ -296,15 +308,23 @@ fun RunningCoachApp() {
                     }
                 )
             }
-            }
-        } ?: run {
-            // Show loading screen while determining start destination
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+                }
+            } ?: run {
+                // Show loading screen while determining start destination
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
         }
+
+        // Debug build badge overlay (top-left)
+        com.runningcoach.v2.presentation.components.DebugBuildBanner(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+        )
     }
 }

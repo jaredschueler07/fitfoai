@@ -1203,3 +1203,704 @@ GO!
 ---
 
 *This PRD is optimized for Claude Code v1.0+ and multi-agent orchestration. Last updated: January 2025*
+
+---
+
+# 🚀 PHASE 4: COMPREHENSIVE FEATURE REQUIREMENTS
+## Data Intelligence & Training Platform Enhancement
+
+### 📋 Epic Overview: Advanced FITFOAI Features
+**Sprint Duration**: September 5 - October 3, 2025 (4 weeks - Multi-Sprint Epic)  
+**Epic Goal**: Transform FITFOAI into a comprehensive training intelligence platform with historical data analysis, AI-generated training plans, and advanced calendar views
+
+This major release focuses on data intelligence and training personalization through:
+1. Enhanced UI for imperial units and better user experience
+2. Advanced data models with source tracking and migration
+3. Historical data import and deduplication
+4. Training plan generation using AI
+5. Rich calendar views and statistics dashboards
+6. Comprehensive testing across all features
+
+### 🎯 Success Metrics for Phase 4
+- **Data Import Success Rate**: 95%+ Google Fit sessions imported without duplicates
+- **Training Plan Quality**: 85%+ user satisfaction with AI-generated plans
+- **UI Performance**: <500ms load time for calendar views with 90 days of data
+- **Test Coverage**: 90%+ coverage for new data pipeline and training features
+- **User Engagement**: 40%+ increase in weekly active users with new features
+
+---
+
+## 📝 FEATURE 1: UI Improvements - Imperial Units & User Experience
+
+### Epic 1.1: Weight Field Enhancement [PRIORITY: P1]
+**As a user, I want to see clearly labeled weight units so that I understand the expected format for weight entry.**
+
+#### User Story 1.1.1: Weight Field Label Addition
+**Story**: As a user entering my weight, I want to see "lbs" clearly displayed next to the numeric field so that I know the expected unit.
+
+**Acceptance Criteria**:
+- GIVEN I am on the PersonalizeProfileScreen weight field
+- WHEN I view the weight input field
+- THEN I MUST see "lbs" label displayed next to the numeric input
+- AND the label MUST be visually integrated (not just placeholder text)
+- AND the field MUST accept only numeric input
+- AND the field MUST validate weight range (50-500 lbs)
+- AND the field MUST show clear validation errors for invalid weights
+
+**Technical Requirements**:
+- Add suffix text "lbs" to OutlinedTextField in PersonalizeProfileScreen.kt line 255-267
+- Implement input validation for weight range
+- Update any existing weight display logic to include "lbs" suffix
+- Ensure consistent weight unit display across all screens
+
+**Implementation Status**: Current implementation needs enhancement for labeling
+
+### Epic 1.2: Height Field Dropdown Enhancement [PRIORITY: P1]
+**As a user, I want an intuitive height selection dropdown so that I can easily select my height in feet and inches.**
+
+#### User Story 1.2.1: Height Dropdown Range Implementation
+**Story**: As a user entering my height, I want to select from a dropdown range of 4'10" to 7'0" with immutable string values.
+
+**Acceptance Criteria**:
+- GIVEN I am on the PersonalizeProfileScreen height field
+- WHEN I tap the height dropdown
+- THEN I MUST see height options from 4'10" to 7'0" (total 27 options)
+- AND each option MUST be formatted as "X'Y\"" (e.g., "5'8\"")
+- AND selected height MUST be stored as immutable string value
+- AND dropdown MUST be searchable/filterable for quick selection
+- AND field MUST be read-only when not expanded
+- AND selected value MUST persist across screen navigation
+
+**Technical Requirements**:
+- Current implementation in PersonalizeProfileScreen.kt lines 207-252 is correct
+- Verify height options generation covers full range (4'10" to 7'0")
+- Ensure string storage format is consistent
+- Test dropdown behavior and selection persistence
+- Update any related height display logic across app
+
+**Implementation Status**: ✅ **ALREADY IMPLEMENTED** - Current code meets requirements
+
+---
+
+## 📝 FEATURE 2: Data Model & Database Migration
+
+### Epic 2.1: RunSessionEntity Source Tracking [PRIORITY: P0]
+**As the system, I need to track the source of run sessions so that I can distinguish between FITFOAI-recorded runs and imported Google Fit data.**
+
+#### User Story 2.1.1: Add Source Enum Field
+**Story**: As the system, I want to add a source field to RunSessionEntity so that I can track where each run session originated.
+
+**Acceptance Criteria**:
+- GIVEN I need to track run session sources
+- WHEN a run session is created or imported
+- THEN the session MUST have a source field with values: FITFOAI, GOOGLE_FIT
+- AND new FITFOAI sessions MUST default to source = FITFOAI
+- AND imported sessions MUST be marked as source = GOOGLE_FIT
+- AND existing sessions without source MUST be backfilled as FITFOAI
+- AND database migration MUST handle the new field safely
+- AND all queries MUST continue to work with existing data
+
+**Technical Requirements**:
+- Add `source: String` field to RunSessionEntity with default value "FITFOAI"
+- Create enum class `enum class RunSource { FITFOAI, GOOGLE_FIT }`
+- Create database migration script from current version to version + 1
+- Add backfill logic for existing records (set source = "FITFOAI")
+- Update RunSessionDao queries to handle new field
+- Verify foreign key constraints remain intact
+
+#### User Story 2.1.2: Database Migration Implementation
+**Story**: As the system, I want a safe database migration so that existing user data is preserved when adding the source field.
+
+**Acceptance Criteria**:
+- GIVEN users have existing run session data
+- WHEN the app updates with the new source field
+- THEN database migration MUST execute automatically
+- AND all existing run sessions MUST be preserved
+- AND existing sessions MUST be backfilled with source = "FITFOAI"
+- AND migration MUST handle edge cases (empty database, corrupted data)
+- AND migration failure MUST not cause app crashes
+- AND rollback strategy MUST be available if needed
+
+**Technical Requirements**:
+- Create Room migration from current database version to new version
+- Add SQL ALTER TABLE statement to add source column with default
+- Update database version number in FITFOAIDatabase
+- Test migration with various data scenarios
+- Add migration tests to verify data integrity
+
+### Epic 2.2: Enhanced Training Plan Entities [PRIORITY: P1]
+**As the system, I need detailed workout entities so that I can store and manage AI-generated training plans effectively.**
+
+#### User Story 2.2.1: Create WorkoutEntity
+**Story**: As the system, I want a WorkoutEntity so that I can store individual workouts within training plans.
+
+**Acceptance Criteria**:
+- GIVEN I need to store detailed workout information
+- WHEN a training plan is created
+- THEN individual workouts MUST be stored as WorkoutEntity records
+- AND each workout MUST link to a TrainingPlanEntity via foreign key
+- AND workouts MUST include: name, description, duration, intensity, type, scheduled date
+- AND workouts MUST support different types: EASY_RUN, TEMPO, INTERVALS, LONG_RUN, REST, CROSS_TRAINING
+- AND workouts MUST track completion status and actual vs planned metrics
+- AND database indices MUST optimize queries by training plan and date
+
+**Technical Requirements**:
+- Create WorkoutEntity with fields: id, trainingPlanId (FK), name, description, scheduledDate, duration, workoutType, intensity, completed, completedAt, actualDuration, notes
+- Add WorkoutDao with CRUD operations
+- Create foreign key relationship to TrainingPlanEntity
+- Add database indices for trainingPlanId and scheduledDate
+- Update TrainingPlanEntity to reference associated workouts
+
+**Entity Schema**:
+```kotlin
+@Entity(
+    tableName = "workouts",
+    foreignKeys = [ForeignKey(
+        entity = TrainingPlanEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["trainingPlanId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index("trainingPlanId"), Index("scheduledDate")]
+)
+data class WorkoutEntity(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val trainingPlanId: Long,
+    val name: String,
+    val description: String,
+    val scheduledDate: Long,
+    val duration: Int, // minutes
+    val workoutType: String, // WorkoutType enum
+    val intensity: String, // EASY, MODERATE, HARD
+    val completed: Boolean = false,
+    val completedAt: Long? = null,
+    val actualDuration: Int? = null,
+    val notes: String? = null,
+    val createdAt: Long = System.currentTimeMillis()
+)
+```
+
+---
+
+## 📝 FEATURE 3: Google Fit Historical Import (90 Days)
+
+### Epic 3.1: Historical Data Import Pipeline [PRIORITY: P0]
+**As a user, I want my last 90 days of Google Fit run data imported so that I can see my complete running history in FITFOAI.**
+
+#### User Story 3.1.1: 90-Day Data Import Implementation
+**Story**: As a user with existing Google Fit data, I want the app to import my last 90 days of running sessions so that I have complete historical context.
+
+**Acceptance Criteria**:
+- GIVEN I connect my Google Fit account
+- WHEN the initial sync completes
+- THEN the app MUST import up to 90 days of historical run sessions
+- AND import MUST include: distance, duration, route (if available), calories, start/end times
+- AND import MUST handle Google Fit API rate limits gracefully
+- AND import MUST show progress to user during long operations
+- AND import MUST complete even if some sessions fail (partial success)
+- AND import MUST not block other app functionality
+- AND import MUST handle network interruptions with resume capability
+
+**Technical Requirements**:
+- Extend GoogleFitService to query historical sessions (last 90 days)
+- Implement batch processing for large datasets
+- Add progress tracking and user feedback
+- Handle Google Fit API pagination for large result sets
+- Implement retry logic for failed session imports
+- Add background processing using WorkManager
+
+#### User Story 3.1.2: Deduplication Strategy Implementation
+**Story**: As the system, I want robust deduplication so that run sessions are not duplicated between FITFOAI recordings and Google Fit imports.
+
+**Acceptance Criteria**:
+- GIVEN I have both FITFOAI-recorded runs and Google Fit imports
+- WHEN the system processes run data
+- THEN duplicate sessions MUST be identified accurately
+- AND deduplication MUST use: start time (±5 min), distance (±5%), duration (±10%)
+- AND Google Fit sessions MUST NOT overwrite FITFOAI sessions (FITFOAI priority)
+- AND near-duplicate detection MUST handle slight timing differences
+- AND deduplication conflicts MUST be logged for analysis
+- AND user MUST be notified of significant deduplication actions
+
+**Technical Requirements**:
+- Create deduplication algorithm comparing sessions by time, distance, duration
+- Implement fuzzy matching for near-duplicates (timing differences from GPS vs manual)
+- Create conflict resolution rules (FITFOAI data takes priority)
+- Add deduplication logging and metrics
+- Create user notification system for duplicate handling
+
+---
+
+## 📝 FEATURE 4: Run History & Statistics UI
+
+### Epic 4.1: Source-Aware Run History Display [PRIORITY: P1]
+**As a user, I want to see my run history with source badges so that I can distinguish between FITFOAI-recorded runs and imported Google Fit data.**
+
+#### User Story 4.1.1: Source Badges Implementation
+**Story**: As a user viewing my run history, I want to see source badges so that I can identify which runs were recorded by FITFOAI vs imported from Google Fit.
+
+**Acceptance Criteria**:
+- GIVEN I have runs from both FITFOAI and Google Fit
+- WHEN I view my run history
+- THEN each run MUST display a source badge ("FITFOAI" or "Google Fit")
+- AND badges MUST have distinct visual styling (colors, icons)
+- AND badges MUST be clearly readable but not overwhelming
+- AND FITFOAI runs MUST have primary app color badge
+- AND Google Fit runs MUST have Google-branded color badge
+- AND badges MUST be consistent across all run display contexts
+
+**Technical Requirements**:
+- Create SourceBadge composable component
+- Design badge styling for FITFOAI vs Google Fit sources
+- Add badge display to run list items, run details, and dashboard
+- Implement badge color scheme and iconography
+- Ensure accessibility compliance for badge colors
+
+#### User Story 4.1.2: Source Filtering Implementation
+**Story**: As a user, I want to filter my run history by source so that I can focus on specific types of run data.
+
+**Acceptance Criteria**:
+- GIVEN I have runs from multiple sources
+- WHEN I access run history filtering
+- THEN I MUST be able to filter by: All Sources, FITFOAI Only, Google Fit Only
+- AND filters MUST update the display immediately
+- AND filters MUST persist during app session
+- AND filtered statistics MUST update to match visible runs
+- AND filter state MUST be clearly indicated in the UI
+- AND filter reset option MUST be easily accessible
+
+**Technical Requirements**:
+- Add filter UI component to run history screen
+- Implement filter state management in ViewModel
+- Update run history queries to filter by source
+- Ensure statistics calculations respect active filters
+- Add filter persistence during session
+
+---
+
+## 📝 FEATURE 5: Training Plan Generation (Gemini AI)
+
+### Epic 5.1: AI Input Collection System [PRIORITY: P0]
+**As the system, I need to collect comprehensive user data so that I can generate personalized training plans using AI.**
+
+#### User Story 5.1.1: User Data Context Collection
+**Story**: As the system generating training plans, I want to collect comprehensive user context so that AI can create personalized training recommendations.
+
+**Acceptance Criteria**:
+- GIVEN I need to generate a training plan
+- WHEN collecting user context
+- THEN I MUST gather: current fitness level, running history (last 90 days), goals, available training time
+- AND I MUST include: recent pace trends, injury history, preferred running days, race goals
+- AND I MUST consider: current weekly mileage, longest recent run, training experience level
+- AND context MUST be formatted for AI consumption (structured JSON)
+- AND context MUST protect user privacy (no PII in AI requests)
+- AND context collection MUST handle missing data gracefully
+
+**Technical Requirements**:
+- Create UserContextCollector service to aggregate user data
+- Implement data anonymization for AI requests
+- Create structured JSON schema for AI input
+- Add data validation and completeness checking
+- Handle missing data with appropriate defaults
+
+#### User Story 5.1.2: Gemini API Integration for Plan Generation
+**Story**: As the system, I want to integrate with Gemini API so that I can generate intelligent, personalized training plans.
+
+**Acceptance Criteria**:
+- GIVEN I have user context data
+- WHEN I request training plan generation
+- THEN Gemini API MUST receive properly formatted user context
+- AND API request MUST include specific training plan requirements
+- AND API response MUST return structured training plan data
+- AND API integration MUST handle rate limits and errors gracefully
+- AND API requests MUST be optimized for cost and performance
+- AND generated plans MUST be validated before storage
+
+**Technical Requirements**:
+- Create GeminiTrainingPlanService for API integration
+- Implement request formatting and response parsing
+- Add API error handling and retry logic
+- Create plan validation logic for AI responses
+- Add API usage monitoring and cost tracking
+
+---
+
+## 📝 FEATURE 6: Enhanced Onboarding Integration
+
+### Epic 6.1: Post-Google Fit Connection Flow [PRIORITY: P1]
+**As a user, I want seamless transition from Google Fit connection to training plan creation so that onboarding feels integrated and purposeful.**
+
+#### User Story 6.1.1: Enhanced Connection Flow
+**Story**: As a user completing Google Fit connection, I want to immediately proceed to training plan generation so that I can get personalized recommendations right away.
+
+**Acceptance Criteria**:
+- GIVEN I have successfully connected Google Fit
+- WHEN connection completes
+- THEN app MUST automatically trigger historical data import
+- AND app MUST show progress of data analysis for plan generation
+- AND app MUST transition to training plan generation flow
+- AND user MUST understand the connection between Google Fit data and personalized plans
+- AND flow MUST handle connection failures gracefully with retry options
+- AND user MUST be able to skip plan generation if desired
+
+**Technical Requirements**:
+- Update ConnectAppsScreen to trigger data import after connection
+- Add progress indicators for data analysis phase
+- Create navigation flow from connection to plan generation
+- Implement skip options for users not wanting immediate plan generation
+- Add educational content about data usage for personalization
+
+---
+
+## 📝 FEATURE 7: Calendar View Implementation
+
+### Epic 7.1: Month Grid Calendar [PRIORITY: P1]
+**As a user, I want a monthly calendar view so that I can see my training schedule and completed workouts in a familiar, easy-to-navigate format.**
+
+#### User Story 7.1.1: Basic Calendar Grid Implementation
+**Story**: As a user, I want to see a month grid calendar so that I can view my training plan and workout history in calendar format.
+
+**Acceptance Criteria**:
+- GIVEN I have a training plan and workout history
+- WHEN I view the calendar
+- THEN I MUST see a standard month grid (7 days × ~5 weeks)
+- AND calendar MUST show current month with navigation to previous/next months
+- AND each day MUST show workout indicators (dots, colors, or small text)
+- AND today MUST be clearly highlighted
+- AND calendar MUST be responsive to different screen sizes
+- AND calendar MUST load quickly (<500ms) even with 90 days of data
+
+**Technical Requirements**:
+- Create CalendarScreen with month grid layout using Compose
+- Implement month navigation controls
+- Add workout data aggregation for calendar display
+- Create responsive calendar grid that adapts to screen sizes
+- Optimize calendar data loading for performance
+
+#### User Story 7.1.2: Workout Dot Indicators
+**Story**: As a user viewing the calendar, I want to see workout indicators on each day so that I can quickly identify planned vs completed workouts.
+
+**Acceptance Criteria**:
+- GIVEN I have scheduled and completed workouts
+- WHEN I view calendar days
+- THEN planned workouts MUST show as outlined dots
+- AND completed workouts MUST show as filled dots
+- AND different workout types MUST have different colors (easy run, tempo, long run, etc.)
+- AND multiple workouts per day MUST be clearly indicated (multiple dots or combined indicator)
+- AND rest days MUST be clearly distinguishable from workout days
+- AND indicators MUST be accessible (not color-only differentiation)
+
+**Technical Requirements**:
+- Create workout indicator component with different states and colors
+- Implement workout type color coding system
+- Handle multiple workouts per day display
+- Add accessibility support (shapes, patterns, text alternatives)
+- Optimize indicator rendering for performance
+
+---
+
+## 📝 FEATURE 8: Comprehensive Testing Requirements
+
+### Epic 8.1: Unit Testing Suite [PRIORITY: P0]
+**As a developer, I need comprehensive unit tests so that data pipeline and training plan features work reliably across different scenarios.**
+
+#### User Story 8.1.1: Data Pipeline Unit Tests
+**Story**: As a developer, I want unit tests for data import and deduplication so that Google Fit integration works correctly.
+
+**Acceptance Criteria**:
+- GIVEN new data pipeline features
+- WHEN running unit tests
+- THEN tests MUST cover: Google Fit data import, session deduplication, source field handling
+- AND tests MUST cover edge cases: API failures, partial data, corrupted responses
+- AND tests MUST verify database migration correctness
+- AND tests MUST validate deduplication algorithm accuracy
+- AND tests MUST achieve >90% code coverage on critical data paths
+- AND tests MUST run in <30 seconds for CI/CD integration
+
+**Technical Requirements**:
+- Create GoogleFitImportServiceTest with comprehensive test cases
+- Add SessionDeduplicationTest for algorithm validation
+- Create database migration tests
+- Add data validation and edge case tests
+- Implement test performance optimization
+
+#### User Story 8.1.2: Training Plan Generation Tests
+**Story**: As a developer, I want unit tests for training plan features so that AI integration and plan storage work correctly.
+
+**Acceptance Criteria**:
+- GIVEN training plan generation features
+- WHEN running unit tests
+- THEN tests MUST cover: Gemini API integration, JSON schema validation, plan storage
+- AND tests MUST mock AI responses with various plan structures
+- AND tests MUST verify plan persistence and retrieval accuracy
+- AND tests MUST validate user context collection completeness
+- AND tests MUST handle API failures and invalid responses gracefully
+- AND tests MUST verify plan regeneration logic
+
+**Technical Requirements**:
+- Create GeminiTrainingPlanServiceTest with mocked API responses
+- Add TrainingPlanStorageTest for database operations
+- Create UserContextCollectorTest for data aggregation
+- Add JSON schema validation tests
+- Implement comprehensive test data generation
+
+---
+
+## 🗓️ SPRINT STRUCTURE & IMPLEMENTATION TIMELINE
+
+### Sprint 4.1: Foundation & Data Model (Week 1: Sep 5-11)
+**Sprint Goal**: Establish data foundation with source tracking and database migrations
+
+**Sprint Objectives**:
+- Complete RunSessionEntity source field addition with migration
+- Implement WorkoutEntity and enhanced TrainingPlanEntity
+- Create performance database indices
+- Establish comprehensive unit testing framework
+- Begin Google Fit historical import implementation
+
+**Sprint Success Criteria**:
+- All database migrations execute successfully
+- Source tracking works for new and existing data
+- Unit test coverage reaches 85% on new components
+- Google Fit import retrieves historical data (basic implementation)
+
+### Sprint 4.2: Data Intelligence & Import (Week 2: Sep 12-18)
+**Sprint Goal**: Complete data import pipeline with deduplication and statistics
+
+**Sprint Objectives**:
+- Complete 90-day Google Fit historical import
+- Implement robust deduplication strategy
+- Create source-aware statistics dashboard
+- Add run history filtering and source badges
+- Implement idempotent sync processes
+
+**Sprint Success Criteria**:
+- 90-day import completes with <5% duplicate rate
+- Statistics dashboard shows combined and per-source data
+- Deduplication algorithm achieves >95% accuracy
+- Sync process handles interruptions and resume correctly
+
+### Sprint 4.3: AI Training Plans & UI (Week 3: Sep 19-25)
+**Sprint Goal**: Deliver AI-generated training plans with enhanced onboarding
+
+**Sprint Objectives**:
+- Complete Gemini API integration for training plan generation
+- Implement JSON schema validation and plan persistence
+- Create enhanced onboarding flow with plan generation
+- Add weight field "lbs" label (quick UI improvement)
+- Build plan review and regeneration features
+
+**Sprint Success Criteria**:
+- AI generates valid training plans >90% of the time
+- Plan generation completes in <30 seconds average
+- Onboarding flow seamlessly transitions to plan creation
+- Users can successfully regenerate plans with feedback
+
+### Sprint 4.4: Calendar & Testing (Week 4: Sep 26 - Oct 2)
+**Sprint Goal**: Complete calendar view and comprehensive testing suite
+
+**Sprint Objectives**:
+- Implement month grid calendar with workout indicators
+- Add day detail views with run integration
+- Create source overlay toggles for calendar
+- Complete integration testing suite
+- Finalize UI testing automation
+
+**Sprint Success Criteria**:
+- Calendar loads 90 days of data in <500ms
+- Day details accurately show planned vs actual workouts
+- Integration tests cover all major user workflows
+- UI tests validate accessibility and multi-device support
+
+---
+
+## 👥 SPECIALIZED AGENT TASK ASSIGNMENTS
+
+### 🎯 backend-ml-database-expert - Core Data & AI Systems
+**Primary Responsibility**: Data models, database operations, AI integration, and backend services
+**Sprint Workload**: 40% of total implementation effort
+
+#### P0 Tasks - Sprint 4.1 (Week 1)
+**Task BK-4.1.1: RunSessionEntity Source Field Implementation**
+- **Description**: Add source field to RunSessionEntity with enum and database migration
+- **Acceptance Criteria**:
+  - Add `source: String` field with default "FITFOAI"
+  - Create `enum class RunSource { FITFOAI, GOOGLE_FIT }`
+  - Create database migration script preserving all existing data
+  - Backfill existing sessions with source = "FITFOAI"
+- **Dependencies**: None
+- **Estimated Effort**: 8 hours
+- **Files to Modify**: `RunSessionEntity.kt`, `FITFOAIDatabase.kt`, create migration class
+
+**Task BK-4.1.2: Enhanced Training Plan Entities**
+- **Description**: Create WorkoutEntity and enhance TrainingPlanEntity for AI-generated plans
+- **Acceptance Criteria**:
+  - Create WorkoutEntity with full schema (id, trainingPlanId, name, type, duration, intensity, completed)
+  - Enhance TrainingPlanEntity with AI metadata fields
+  - Create foreign key relationships and indices
+  - Add corresponding DAO classes with CRUD operations
+- **Dependencies**: None
+- **Estimated Effort**: 12 hours
+- **Files to Create**: `WorkoutEntity.kt`, `WorkoutDao.kt`, enhance `TrainingPlanEntity.kt`
+
+**Task BK-4.1.3: Database Performance Indices**
+- **Description**: Create optimized database indices for performance
+- **Acceptance Criteria**:
+  - Add composite indices: (userId, startTime), (source, userId)
+  - Add workout indices: (trainingPlanId, scheduledDate)
+  - Create migration for index creation
+  - Validate query performance improvement >50%
+- **Dependencies**: BK-4.1.1 (source field)
+- **Estimated Effort**: 6 hours
+
+#### P0 Tasks - Sprint 4.2 (Week 2)
+**Task BK-4.2.1: Google Fit Historical Import Service**
+- **Description**: Implement 90-day historical data import from Google Fit
+- **Acceptance Criteria**:
+  - Query Google Fit API for last 90 days of run sessions
+  - Handle API pagination and rate limits
+  - Import with progress tracking and error handling
+  - Mark imported sessions with source = "GOOGLE_FIT"
+- **Dependencies**: BK-4.1.1 (source field)
+- **Estimated Effort**: 16 hours
+- **Files to Modify**: `GoogleFitService.kt`, create `GoogleFitImportService.kt`
+
+**Task BK-4.2.2: Session Deduplication Algorithm**
+- **Description**: Implement robust deduplication for run sessions
+- **Acceptance Criteria**:
+  - Compare sessions by start time (±5 min), distance (±5%), duration (±10%)
+  - FITFOAI sessions take priority over Google Fit imports
+  - Log deduplication decisions for analysis
+  - Handle near-duplicate detection intelligently
+- **Dependencies**: BK-4.2.1 (import service)
+- **Estimated Effort**: 10 hours
+- **Files to Create**: `SessionDeduplicationService.kt`
+
+### 🎨 android-ui-designer - User Interface & Experience
+**Primary Responsibility**: UI components, screens, user experience, and visual design
+**Sprint Workload**: 35% of total implementation effort
+
+#### P1 Tasks - Sprint 4.1 (Week 1)
+**Task UI-4.1.1: Weight Field Label Enhancement**
+- **Description**: Add "lbs" label to weight field in PersonalizeProfileScreen
+- **Acceptance Criteria**:
+  - Add "lbs" suffix text to weight OutlinedTextField
+  - Ensure label is visually integrated and accessible
+  - Validate weight range (50-500 lbs) with clear error messages
+  - Update any other weight displays to show "lbs"
+- **Dependencies**: None
+- **Estimated Effort**: 2 hours
+- **Files to Modify**: `PersonalizeProfileScreen.kt`
+
+**Task UI-4.1.2: Source Badge Component**
+- **Description**: Create reusable source badge component for run displays
+- **Acceptance Criteria**:
+  - Create SourceBadge composable with FITFOAI and Google Fit variants
+  - Design distinct visual styling (colors, icons)
+  - Ensure accessibility compliance (not color-only)
+  - Make badges clearly readable but not overwhelming
+- **Dependencies**: None
+- **Estimated Effort**: 4 hours
+- **Files to Create**: `SourceBadge.kt`
+
+### 🔧 devops-architecture-engineer - Infrastructure & Integration
+**Primary Responsibility**: Build system, CI/CD, performance optimization, and system architecture
+**Sprint Workload**: 15% of total implementation effort
+
+#### P0 Tasks - Sprint 4.1 (Week 1)
+**Task DO-4.1.1: Database Migration CI/CD Pipeline**
+- **Description**: Ensure database migrations are tested in CI/CD pipeline
+- **Acceptance Criteria**:
+  - Add migration testing to GitHub Actions
+  - Test migrations on different Android API levels
+  - Validate migration rollback scenarios
+  - Ensure migration performance acceptable
+- **Dependencies**: BK-4.1.1 (migration scripts)
+- **Estimated Effort**: 6 hours
+
+### 🧪 qa-testing-specialist - Quality Assurance & Testing
+**Primary Responsibility**: Test planning, test automation, quality validation, and bug prevention
+**Sprint Workload**: 10% of total implementation effort
+
+#### P0 Tasks - Sprint 4.1 (Week 1)
+**Task QA-4.1.1: Data Pipeline Unit Test Suite**
+- **Description**: Create comprehensive unit tests for data pipeline
+- **Acceptance Criteria**:
+  - Test Google Fit import with mock data
+  - Test deduplication algorithm accuracy
+  - Test database migration correctness
+  - Achieve >90% code coverage on critical data paths
+- **Dependencies**: BK-4.1.1, BK-4.1.2 (data models)
+- **Estimated Effort**: 16 hours
+- **Files to Create**: `GoogleFitImportServiceTest.kt`, `SessionDeduplicationTest.kt`
+
+---
+
+## 🔗 INTEGRATION POINTS & API CONTRACTS
+
+### Data Flow Architecture
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Google Fit    │───▶│  Import Service  │───▶│  Deduplication  │
+│      API        │    │   (90 days)     │    │    Service      │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                                         │
+                                                         ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  Calendar UI    │◀───│   Statistics     │◀───│   Run Sessions  │
+│    Display      │    │   Dashboard      │    │    Database     │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
+
+### API Contracts
+
+#### RunSessionRepository Interface
+```kotlin
+interface RunSessionRepository {
+    suspend fun getSessionsBySource(source: RunSource, limit: Int): Flow<List<RunSession>>
+    suspend fun getSessionsForDateRange(startDate: Long, endDate: Long): Flow<List<RunSession>>
+    suspend fun importGoogleFitSessions(sessions: List<GoogleFitSession>): Result<Int>
+    suspend fun deduplicateSessions(): Result<DeduplicationReport>
+    suspend fun getStatistics(timeRange: TimeRange, source: RunSource?): Statistics
+}
+```
+
+#### TrainingPlanService Interface
+```kotlin
+interface TrainingPlanService {
+    suspend fun generatePlan(userContext: UserContext): Result<TrainingPlan>
+    suspend fun storePlan(plan: TrainingPlan): Result<Long>
+    suspend fun getPlanWithWorkouts(planId: Long): Flow<TrainingPlanWithWorkouts>
+    suspend fun regeneratePlan(planId: Long, feedback: PlanFeedback): Result<TrainingPlan>
+}
+```
+
+---
+
+## 📊 SUCCESS METRICS & VALIDATION
+
+### Phase 4 Success Criteria
+
+#### Technical Performance Metrics
+- **Data Import Success Rate**: >95% of Google Fit sessions imported without errors
+- **Deduplication Accuracy**: >95% correct duplicate detection
+- **Calendar Performance**: <500ms load time for 90 days of data
+- **Database Query Performance**: >50% improvement with new indices
+- **Training Plan Generation**: <30 seconds average generation time
+- **UI Responsiveness**: <300ms response time for all user interactions
+
+#### User Experience Metrics
+- **Onboarding Completion**: >80% users complete new enhanced flow
+- **Feature Adoption**: >60% users create AI training plans within first week
+- **Calendar Usage**: >40% users interact with calendar view weekly
+- **Statistics Engagement**: >50% users view statistics dashboard weekly
+- **User Satisfaction**: >4.2 stars app store rating maintained
+
+#### Quality Metrics
+- **Test Coverage**: >90% unit test coverage on new features
+- **Integration Test Success**: 100% critical user flows covered
+- **Bug Escape Rate**: <2% bugs escape to production
+- **Performance Regression**: 0 performance regressions introduced
+- **Accessibility Compliance**: 100% new screens meet WCAG guidelines
+
+This comprehensive Phase 4 plan provides detailed requirements, clear acceptance criteria, and specific task assignments for each specialized agent to implement the requested FITFOAI app improvements. Each feature has been broken down into manageable user stories with technical specifications and success metrics.

@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,9 +20,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import android.util.Log
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.launch
 import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.repository.UserRepository
+import com.runningcoach.v2.data.service.APIConnectionManager
 import com.runningcoach.v2.presentation.theme.AppColors
 import com.runningcoach.v2.presentation.components.VoiceCoachingCard
 import com.runningcoach.v2.presentation.components.CoachPersonality
@@ -75,6 +80,40 @@ fun SettingsScreen(
     var batteryOptimization by remember { mutableStateOf(false) }
     var highAccuracyGPS by remember { mutableStateOf(true) }
     
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // API Connection Manager for app integrations
+    val apiConnectionManager = remember { APIConnectionManager(context) }
+    val googleFitConnected by apiConnectionManager.googleFitConnected.collectAsState(initial = false)
+    val connectionStatus by apiConnectionManager.connectionStatus.collectAsState(initial = null)
+
+    // Launcher to handle Google Sign-In and then Fitness permission prompt
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        try {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            val account = task.getResult(ApiException::class.java)
+            Log.i("SettingsScreen", "Google Sign-In successful: ${account?.email}")
+            scope.launch {
+                try {
+                    apiConnectionManager.handleGoogleSignInResult()
+                    val activity = context as? android.app.Activity
+                    if (activity != null) {
+                        apiConnectionManager.requestGoogleFitPermissions(activity)
+                    }
+                } catch (e: Exception) {
+                    Log.e("SettingsScreen", "Error finalizing Google Fit connection", e)
+                }
+            }
+        } catch (e: ApiException) {
+            Log.e("SettingsScreen", "Google Sign-In failed", e)
+        } catch (e: Exception) {
+            Log.e("SettingsScreen", "Unexpected error during Google Sign-In", e)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -242,6 +281,55 @@ fun SettingsScreen(
                 )
             }
             
+            item {
+                // Connected Apps Section
+                SettingsSection(
+                    title = "Connected Apps",
+                    description = "Manage third-party connections and permissions",
+                    content = {
+                        Column {
+                            // Google Fit status display
+                            SettingItem(
+                                title = if (googleFitConnected) "Google Fit: Connected" else "Google Fit: Not connected",
+                                subtitle = connectionStatus ?: "",
+                                icon = Icons.Default.Favorite,
+                                onClick = null
+                            )
+
+                            // Retry Connection
+                            SettingItem(
+                                title = "Retry Google Fit Connection",
+                                subtitle = "Re-run sign-in and permissions",
+                                icon = Icons.Default.Refresh,
+                                onClick = {
+                                    try {
+                                        val intent = apiConnectionManager.connectGoogleFit()
+                                        if (intent.action != null || intent.component != null) {
+                                            googleSignInLauncher.launch(intent)
+                                        } else {
+                                            // If no intent, try testing current connection
+                                            apiConnectionManager.testGoogleFitConnection()
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("SettingsScreen", "Error starting Google Fit reconnection", e)
+                                    }
+                                }
+                            )
+
+                            // Disconnect
+                            SettingItem(
+                                title = "Disconnect Google Fit",
+                                subtitle = "Sign out and clear access",
+                                icon = Icons.Default.ExitToApp,
+                                onClick = {
+                                    apiConnectionManager.disconnectGoogleFit()
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+
             item {
                 // App Info Section
                 SettingsSection(

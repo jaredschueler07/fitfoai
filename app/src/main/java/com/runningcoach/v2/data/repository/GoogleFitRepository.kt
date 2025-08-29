@@ -133,7 +133,7 @@ class GoogleFitRepository(
             
             // Update user profile with latest body measurements
             updateUserProfileWithFitnessData(currentUser, fitnessData)
-            
+
             Log.i(TAG, "Successfully synced fitness data for user ${currentUser.id}")
             
                 Result.success(dailySummary.copy(id = summaryId))

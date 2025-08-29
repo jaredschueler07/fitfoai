@@ -6,6 +6,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
@@ -24,6 +29,7 @@ import com.runningcoach.v2.presentation.components.PrimaryButton
 import com.runningcoach.v2.presentation.theme.AppColors
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonalizeProfileScreen(
     onComplete: (ProfileData) -> Unit,
@@ -36,7 +42,6 @@ fun PersonalizeProfileScreen(
     val database = remember { FITFOAIDatabase.getDatabase(context) }
     val userRepository = remember { UserRepository(database) }
     val googleFitService = remember { GoogleFitService(context) }
-    
     var name by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
@@ -48,7 +53,7 @@ fun PersonalizeProfileScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoadingFromGoogleFit by remember { mutableStateOf(false) }
     var autoFillAttempted by remember { mutableStateOf(false) }
-    
+
     // Google Fit connection state
     val isGoogleFitConnected by googleFitService.isConnected.collectAsState()
 
@@ -57,31 +62,15 @@ fun PersonalizeProfileScreen(
         if (isGoogleFitConnected && !autoFillAttempted) {
             autoFillAttempted = true
             isLoadingFromGoogleFit = true
-            
             try {
                 val profileResult = googleFitService.getUserProfileData()
-                
                 if (profileResult.isSuccess) {
                     val profileData = profileResult.getOrNull()
                     profileData?.let { data ->
-                        // Auto-fill name (required field)
-                        data.name?.let { userName ->
-                            if (name.isBlank()) {
-                                name = userName
-                            }
-                        }
-                        
-                        // Auto-fill height and weight with imperial units
-                        data.heightImperial?.let { heightStr ->
-                            if (height.isBlank()) {
-                                height = heightStr
-                            }
-                        }
-                        
-                        data.weightImperial?.let { weightStr ->
-                            if (weight.isBlank()) {
-                                weight = weightStr
-                            }
+                        data.name?.let { userName -> if (name.isBlank()) name = userName }
+                        data.heightImperial?.let { if (height.isBlank()) height = it }
+                        data.weightImperial?.let { w ->
+                            if (weight.isBlank()) weight = w.filter { it.isDigit() }
                         }
                     }
                 } else {
@@ -214,26 +203,61 @@ fun PersonalizeProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Height Field
-                OutlinedTextField(
-                    value = height,
-                    onValueChange = { height = it },
-                    label = { Text("Height") },
-                    placeholder = { Text("5'8\"") },
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AppColors.Primary,
-                        focusedLabelColor = AppColors.Primary,
-                        cursorColor = AppColors.Primary
+                // Height Dropdown (4'10" to 7'0")
+                var heightExpanded by remember { mutableStateOf(false) }
+                val heightOptions = remember {
+                    buildList {
+                        for (ft in 4..7) {
+                            val startIn = if (ft == 4) 10 else 0
+                            val endIn = if (ft == 7) 0 else 11
+                            for (inch in startIn..endIn) {
+                                add("${ft}'${inch}\"")
+                            }
+                        }
+                    }
+                }
+                ExposedDropdownMenuBox(
+                    expanded = heightExpanded,
+                    onExpandedChange = { heightExpanded = !heightExpanded },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    OutlinedTextField(
+                        value = height,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Height") },
+                        placeholder = { Text("Select height") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = heightExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AppColors.Primary,
+                            focusedLabelColor = AppColors.Primary,
+                            cursorColor = AppColors.Primary
+                        )
                     )
-                )
+                    ExposedDropdownMenu(
+                        expanded = heightExpanded,
+                        onDismissRequest = { heightExpanded = false }
+                    ) {
+                        heightOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    height = option
+                                    heightExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
                 
                 // Weight Field
                 OutlinedTextField(
                     value = weight,
-                    onValueChange = { weight = it },
+                    onValueChange = { input -> weight = input.filter { it.isDigit() } },
                     label = { Text("Weight") },
-                    placeholder = { Text("150 lbs") },
+                    placeholder = { Text("150") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AppColors.Primary,
