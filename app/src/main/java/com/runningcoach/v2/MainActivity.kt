@@ -104,25 +104,7 @@ class MainActivity : ComponentActivity() {
                         println("Spotify OAuth error: $error")
                     }
                 }
-                "googlefit-callback" -> {
-                    val authCode = uri.getQueryParameter("code")
-                    val error = uri.getQueryParameter("error")
-                    
-                    if (authCode != null) {
-                        // Handle successful Google Fit OAuth
-                        CoroutineScope(Dispatchers.Main).launch {
-                            try {
-                                // Handle Google Fit OAuth - this is now handled by activity result
-                                println("Google Fit OAuth callback received")
-                            } catch (e: Exception) {
-                                println("Google Fit OAuth exception: ${e.message}")
-                            }
-                        }
-                    } else if (error != null) {
-                        // Handle OAuth error
-                        println("Google Fit OAuth error: $error")
-                    }
-                }
+                // Note: Google Fit uses Sign-In + Permissions, not OAuth callbacks
             }
         }
     }
@@ -219,7 +201,6 @@ fun RunningCoachApp() {
             // Main App Screens (with bottom navigation)
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
-                    userName = "Runner", // TODO: Get from user profile data
                     onStartRun = {
                         navController.navigate(Screen.RunTracking.route)
                     },

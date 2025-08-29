@@ -23,6 +23,8 @@ import com.runningcoach.v2.domain.model.ConnectedApp
 import com.runningcoach.v2.presentation.components.AppCard
 import com.runningcoach.v2.presentation.components.PrimaryButton
 import com.runningcoach.v2.presentation.components.SecondaryButton
+import com.runningcoach.v2.presentation.components.ErrorSnackbar
+import com.runningcoach.v2.presentation.components.SuccessSnackbar
 import com.runningcoach.v2.presentation.components.icons.ChevronRightIcon
 import com.runningcoach.v2.presentation.components.icons.GoogleFitIcon
 import com.runningcoach.v2.presentation.components.icons.SpotifyIcon
@@ -48,6 +50,8 @@ fun ConnectAppsScreen(
     
     var connectedApps by remember { mutableStateOf(emptyList<ConnectedApp>()) }
     var connectingApp by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
     
     // Observe connection states
     val googleFitConnected by (apiConnectionManager?.googleFitConnected ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
@@ -75,27 +79,37 @@ fun ConnectAppsScreen(
                         val activity = context as? android.app.Activity
                         if (activity != null) {
                             manager.requestGoogleFitPermissions(activity)
+                            successMessage = "Google Fit connected successfully!"
                         } else {
                             android.util.Log.w("ConnectAppsScreen", "Unable to request Fitness permissions: context is not an Activity")
+                            errorMessage = "Unable to request fitness permissions. Please try again."
                         }
                         
                         android.util.Log.i("ConnectAppsScreen", "Google Sign-In handling complete")
                     } catch (e: Exception) {
                         android.util.Log.e("ConnectAppsScreen", "Error handling Google Sign-In result", e)
+                        errorMessage = "Failed to complete Google Fit connection. Please try again."
                     } finally {
                         connectingApp = null
                     }
                 }
             } ?: run {
                 connectingApp = null
+                errorMessage = "Connection service unavailable. Please restart the app."
             }
             
         } catch (e: ApiException) {
             android.util.Log.e("ConnectAppsScreen", "Google Sign-In failed", e)
             connectingApp = null
+            errorMessage = when (e.statusCode) {
+                12501 -> "Google Sign-In was cancelled"
+                12502 -> "Network error. Please check your connection."
+                else -> "Google Sign-In failed. Please try again."
+            }
         } catch (e: Exception) {
             android.util.Log.e("ConnectAppsScreen", "Unexpected error during Google Sign-In", e)
             connectingApp = null
+            errorMessage = "An unexpected error occurred. Please try again."
         }
     }
 
@@ -216,6 +230,7 @@ fun ConnectAppsScreen(
                                             // Handle any errors during connection
                                             android.util.Log.e("ConnectAppsScreen", "Error connecting to Google Fit", e)
                                             connectingApp = null
+                                            errorMessage = "Failed to start Google Fit connection. Please try again."
                                         }
                                     }
                                 } ?: run {
@@ -236,6 +251,7 @@ fun ConnectAppsScreen(
                                             // Handle any errors during connection
                                             android.util.Log.e("ConnectAppsScreen", "Error connecting to Spotify", e)
                                             connectingApp = null
+                                            errorMessage = "Failed to start Spotify connection. Please try again."
                                         }
                                     }
                                 } ?: run {
@@ -266,6 +282,25 @@ fun ConnectAppsScreen(
                 onClick = { onComplete(emptyList()) }
             )
         }
+        
+        // Error and Success Snackbars
+        ErrorSnackbar(
+            message = errorMessage ?: "",
+            isVisible = errorMessage != null,
+            onDismiss = { errorMessage = null },
+            actionLabel = "Retry",
+            onActionClick = {
+                errorMessage = null
+                // Clear any connecting state to allow retry
+                connectingApp = null
+            }
+        )
+        
+        SuccessSnackbar(
+            message = successMessage ?: "",
+            isVisible = successMessage != null,
+            onDismiss = { successMessage = null }
+        )
     }
 }
 

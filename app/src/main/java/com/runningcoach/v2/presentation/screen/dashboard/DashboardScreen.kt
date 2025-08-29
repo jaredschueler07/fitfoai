@@ -30,16 +30,14 @@ fun DashboardScreen(
     onStartRun: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val database = remember { FITFOAIDatabase.getDatabase(context) }
-    val userRepository = remember { UserRepository(database) }
-    val googleFitRepository = remember { GoogleFitRepository(context, database) }
-    
-    val viewModel: DashboardViewModel = viewModel(
-        factory = DashboardViewModel.Factory(userRepository, googleFitRepository)
+    modifier: Modifier = Modifier,
+    viewModel: DashboardViewModel = viewModel(
+        factory = DashboardViewModel.Factory(
+            userRepository = UserRepository(FITFOAIDatabase.getDatabase(LocalContext.current)),
+            googleFitRepository = GoogleFitRepository(LocalContext.current, FITFOAIDatabase.getDatabase(LocalContext.current))
+        )
     )
+) {
     
     val uiState by viewModel.uiState.collectAsState()
     
@@ -244,7 +242,7 @@ fun DashboardScreen(
                                         color = AppColors.OnSurface
                                     )
                                     Text(
-                                        text = "${uiState.fitnessData.steps ?: 0}",
+                                        text = "${uiState.fitnessData?.steps ?: 0}",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = AppColors.Primary
@@ -263,7 +261,7 @@ fun DashboardScreen(
                                         color = AppColors.OnSurface
                                     )
                                     Text(
-                                        text = "${String.format("%.1f", (uiState.fitnessData.distance ?: 0f) * 0.000621371f)} mi",
+                                        text = "${String.format("%.1f", (uiState.fitnessData?.distance ?: 0f) * 0.000621371f)} mi",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = AppColors.Primary
@@ -282,7 +280,7 @@ fun DashboardScreen(
                                         color = AppColors.OnSurface
                                     )
                                     Text(
-                                        text = "${uiState.fitnessData.calories ?: 0}",
+                                        text = "${uiState.fitnessData?.calories ?: 0}",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = AppColors.Primary
@@ -290,7 +288,7 @@ fun DashboardScreen(
                                 }
                                 
                                 // Heart Rate (if available)
-                                uiState.fitnessData.averageHeartRate?.let { heartRate ->
+                                uiState.fitnessData?.averageHeartRate?.let { heartRate ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -311,7 +309,7 @@ fun DashboardScreen(
                                 }
                                 
                                 // Weight (if available)
-                                uiState.fitnessData.weight?.let { weight ->
+                                uiState.fitnessData?.weight?.let { weight ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
