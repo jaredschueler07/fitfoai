@@ -1,5 +1,7 @@
 package com.runningcoach.v2.presentation.screen.connectapps
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.collectAsState
@@ -12,8 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
+import kotlinx.coroutines.launch
 import com.runningcoach.v2.domain.model.AppType
 import com.runningcoach.v2.domain.model.ConnectedApp
 import com.runningcoach.v2.presentation.components.AppCard
@@ -26,10 +30,11 @@ import com.runningcoach.v2.presentation.theme.AppColors
 
 @Composable
 fun ConnectAppsScreen(
-    onComplete: (List<ConnectedApp>) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onComplete: (List<ConnectedApp>) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
     
     // API Connection Manager
     val apiConnectionManager = remember { 
@@ -49,28 +54,47 @@ fun ConnectAppsScreen(
     val spotifyConnected by (apiConnectionManager?.spotifyConnected ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
     val connectionStatus by (apiConnectionManager?.connectionStatus ?: kotlinx.coroutines.flow.MutableStateFlow("Error: Connection manager not initialized")).collectAsState()
     
-    // TEMPORARY: Simulate connection success for testing
-    LaunchedEffect(connectingApp) {
-        connectingApp?.let { appId ->
-            kotlinx.coroutines.delay(2000) // Wait 2 seconds to simulate connection process
+    // Activity result launcher for Google Sign-In
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        try {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            val account = task.getResult(ApiException::class.java)
+            
+            android.util.Log.i("ConnectAppsScreen", "Google Sign-In successful: ${account?.email}")
+            
+            // Handle successful sign-in
             apiConnectionManager?.let { manager ->
-                when (appId) {
-                    "google_fit" -> {
-                        manager.handleGoogleFitActivityResult(
-                            com.runningcoach.v2.data.service.GoogleFitService.GOOGLE_FIT_PERMISSIONS_REQUEST_CODE,
-                            android.app.Activity.RESULT_OK,
-                            null
-                        )
-                    }
-                    "spotify" -> {
-                        try {
-                            manager.handleSpotifyCallback("mock_auth_code_12345")
-                        } catch (e: Exception) {
-                            android.util.Log.e("ConnectAppsScreen", "Error handling Spotify callback", e)
+                // Use coroutine scope to handle the async operations
+                scope.launch {
+                    try {
+                        // Handle the Google Sign-In result and update connection status
+                        manager.handleGoogleSignInResult()
+                        // After sign-in, request Google Fit Fitness permissions if needed
+                        val activity = context as? android.app.Activity
+                        if (activity != null) {
+                            manager.requestGoogleFitPermissions(activity)
+                        } else {
+                            android.util.Log.w("ConnectAppsScreen", "Unable to request Fitness permissions: context is not an Activity")
                         }
+                        
+                        android.util.Log.i("ConnectAppsScreen", "Google Sign-In handling complete")
+                    } catch (e: Exception) {
+                        android.util.Log.e("ConnectAppsScreen", "Error handling Google Sign-In result", e)
+                    } finally {
+                        connectingApp = null
                     }
                 }
+            } ?: run {
+                connectingApp = null
             }
+            
+        } catch (e: ApiException) {
+            android.util.Log.e("ConnectAppsScreen", "Google Sign-In failed", e)
+            connectingApp = null
+        } catch (e: Exception) {
+            android.util.Log.e("ConnectAppsScreen", "Unexpected error during Google Sign-In", e)
             connectingApp = null
         }
     }
@@ -85,6 +109,10 @@ fun ConnectAppsScreen(
                 type = AppType.GOOGLE_FIT,
                 isConnected = true
             ))
+            // Clear connecting state when successfully connected
+            if (connectingApp == "google_fit") {
+                connectingApp = null
+            }
         }
         if (spotifyConnected) {
             apps.add(ConnectedApp(
@@ -93,6 +121,10 @@ fun ConnectAppsScreen(
                 type = AppType.SPOTIFY,
                 isConnected = true
             ))
+            // Clear connecting state when successfully connected
+            if (connectingApp == "spotify") {
+                connectingApp = null
+            }
         }
         connectedApps = apps
     }
@@ -174,10 +206,11 @@ fun ConnectAppsScreen(
                                             // Start Google Fit connection
                                             val intent = manager.connectGoogleFit()
                                             if (intent.action != null || intent.component != null) {
-                                                context.startActivity(intent)
+                                                googleSignInLauncher.launch(intent)
                                             } else {
                                                 // If no intent is returned, user might already be connected
                                                 manager.testGoogleFitConnection()
+                                                connectingApp = null
                                             }
                                         } catch (e: Exception) {
                                             // Handle any errors during connection
@@ -200,13 +233,14 @@ fun ConnectAppsScreen(
                                             val intent = manager.connectSpotify()
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
+                                            // Handle any errors during connection
                                             android.util.Log.e("ConnectAppsScreen", "Error connecting to Spotify", e)
                                             connectingApp = null
                                         }
                                     }
                                 } ?: run {
                                     android.util.Log.e("ConnectAppsScreen", "APIConnectionManager is null")
-                                }
+                                 }
                             }
                         }
                     }
@@ -239,9 +273,9 @@ fun ConnectAppsScreen(
 private fun AppConnectionCard(
     app: ConnectedApp,
     isConnected: Boolean,
+    modifier: Modifier = Modifier,
     isConnecting: Boolean = false,
-    onToggleConnection: (ConnectedApp) -> Unit,
-    modifier: Modifier = Modifier
+    onToggleConnection: (ConnectedApp) -> Unit
 ) {
     AppCard(
         modifier = modifier,

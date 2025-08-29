@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
 
 class FitnessCoachAgent(
     private val context: Context,
-    private val geminiService: GeminiService,
+    private val llmService: LLMService,
     private val elevenLabsService: ElevenLabsService,
     private val database: FITFOAIDatabase
 ) {
@@ -59,7 +59,7 @@ class FitnessCoachAgent(
             val userContext = getUserFitnessContext()
             
             // Generate AI response
-            val aiResponseResult = geminiService.generateFitnessAdvice(message, userContext)
+            val aiResponseResult = llmService.generateFitnessAdvice(message, userContext)
             
             if (aiResponseResult.isSuccess) {
                 val aiResponse = aiResponseResult.getOrThrow()
@@ -102,7 +102,7 @@ class FitnessCoachAgent(
         try {
             _isProcessing.value = true
             
-            val planResult = geminiService.generateTrainingPlan(goals, fitnessLevel, targetRace, timeframe)
+            val planResult = llmService.generateTrainingPlan(goals, fitnessLevel, targetRace, timeframe)
             
             if (planResult.isSuccess) {
                 val plan = planResult.getOrThrow()
@@ -148,7 +148,7 @@ class FitnessCoachAgent(
                 targetDistance = targetDistance
             )
             
-            val coachingResult = geminiService.generateRunCoaching(metricsContext, goals)
+            val coachingResult = llmService.generateRunCoaching(metricsContext, goals)
             
             if (coachingResult.isSuccess) {
                 val coaching = coachingResult.getOrThrow()

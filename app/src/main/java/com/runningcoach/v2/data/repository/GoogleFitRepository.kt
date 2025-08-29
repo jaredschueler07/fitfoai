@@ -21,7 +21,7 @@ class GoogleFitRepository(
         private const val TAG = "GoogleFitRepository"
     }
     
-    private val googleFitService = GoogleFitService(context)
+    val googleFitService = GoogleFitService(context)
     private val userDao = database.userDao()
     private val googleFitDao = database.googleFitDailySummaryDao()
     private val connectedAppDao = database.connectedAppDao()
@@ -39,6 +39,10 @@ class GoogleFitRepository(
             Log.e("GoogleFitRepository", "Error in connectGoogleFit", e)
             android.content.Intent()
         }
+    }
+    
+    suspend fun handleGoogleSignInResult() {
+        googleFitService.handleGoogleSignInResult()
     }
     
     suspend fun updateConnectionStatus(userId: Long, isConnected: Boolean) {

@@ -6,6 +6,7 @@ import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.local.dao.RunSessionDao
 import com.runningcoach.v2.data.repository.RunSessionRepositoryImpl
 import com.runningcoach.v2.data.service.*
+import com.runningcoach.v2.BuildConfig
 import com.runningcoach.v2.domain.repository.RunSessionRepository
 import com.runningcoach.v2.domain.usecase.*
 import kotlinx.coroutines.CoroutineScope
@@ -75,14 +76,22 @@ class AppContainer(private val context: Context) {
         ElevenLabsService(httpClient, context)
     }
     
-    // Fitness Coach Agent
-    private val fitnessCoachAgent: FitnessCoachAgent by lazy {
-        FitnessCoachAgent(context, geminiService, elevenLabsService, database)
-    }
-    
-    // Gemini Service
+    // Gemini Service (existing)
     private val geminiService: GeminiService by lazy {
         GeminiService(httpClient)
+    }
+    
+    // LLM provider selection (GEMINI or GPT)
+    private val llmService: LLMService by lazy {
+        when (BuildConfig.AI_PROVIDER.uppercase()) {
+            "GPT" -> OpenAIService(httpClient)
+            else -> GeminiLLMAdapter(geminiService)
+        }
+    }
+    
+    // Fitness Coach Agent
+    private val fitnessCoachAgent: FitnessCoachAgent by lazy {
+        FitnessCoachAgent(context, llmService, elevenLabsService, database)
     }
     
     // Voice Coaching Manager

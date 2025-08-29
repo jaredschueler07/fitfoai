@@ -57,6 +57,17 @@ class APIConnectionManager(private val context: Context) {
         _connectionStatus.value = "Connecting to Spotify..."
         return spotifyService.initiateConnection()
     }
+
+    // Request Google Fit Fitness API permissions via Activity UI
+    fun requestGoogleFitPermissions(activity: android.app.Activity) {
+        try {
+            _connectionStatus.value = "Requesting Google Fit permissions..."
+            googleFitRepository.googleFitService.requestPermissions(activity)
+        } catch (e: Exception) {
+            Log.e("APIConnectionManager", "Error requesting Google Fit permissions", e)
+            _connectionStatus.value = "Google Fit permissions request failed"
+        }
+    }
     
     fun handleGoogleFitActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         // Handle the activity result through the repository
@@ -75,6 +86,34 @@ class APIConnectionManager(private val context: Context) {
             } catch (e: Exception) {
                 _connectionStatus.value = "Google Fit connection failed: ${e.message}"
             }
+        }
+    }
+    
+    suspend fun handleGoogleSignInResult() {
+        // Handle Google Sign-In result and update connection status
+        try {
+            // Let the repository handle the sign-in result
+            googleFitRepository.handleGoogleSignInResult()
+            
+            // Check the updated connection status
+            val isConnected = googleFitRepository.isGoogleFitConnected()
+            _googleFitConnected.value = isConnected
+            
+            if (isConnected) {
+                _connectionStatus.value = "Google Fit connected successfully"
+                // Sync today's fitness data
+                try {
+                    googleFitRepository.syncTodaysFitnessData()
+                } catch (syncError: Exception) {
+                    Log.w("APIConnectionManager", "Failed to sync data after connection", syncError)
+                }
+            } else {
+                _connectionStatus.value = "Google Fit permissions required"
+            }
+        } catch (e: Exception) {
+            Log.e("APIConnectionManager", "Error handling Google Sign-In result", e)
+            _connectionStatus.value = "Google Fit connection failed: ${e.message}"
+            _googleFitConnected.value = false
         }
     }
     
@@ -133,6 +172,7 @@ class APIConnectionManager(private val context: Context) {
     fun provideGoogleFitRepository(): GoogleFitRepository = googleFitRepository
     fun provideSpotifyService(): SpotifyService = spotifyService
     
+
     fun close() {
         httpClient.close()
     }
