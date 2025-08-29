@@ -2,6 +2,7 @@ package com.runningcoach.v2.presentation.components.icons
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
@@ -139,6 +140,19 @@ fun SettingsIcon(
     Icon(
         imageVector = Icons.Default.Settings,
         contentDescription = "Settings",
+        modifier = modifier,
+        tint = tint
+    )
+}
+
+@Composable
+fun CloseIcon(
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Icon(
+        imageVector = Icons.Default.Close,
+        contentDescription = "Close",
         modifier = modifier,
         tint = tint
     )

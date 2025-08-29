@@ -15,7 +15,8 @@ class FitnessCoachAgent(
     private val context: Context,
     private val llmService: LLMService,
     private val elevenLabsService: ElevenLabsService,
-    private val database: FITFOAIDatabase
+    private val database: FITFOAIDatabase,
+    private val chatContextProvider: ChatContextProvider? = null
 ) {
     
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -45,7 +46,7 @@ class FitnessCoachAgent(
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             _isProcessing.value = true
-            
+
             // Save user message to database
             val userMessage = AIConversationEntity(
                 userId = currentUserId,
@@ -54,12 +55,16 @@ class FitnessCoachAgent(
                 messageType = "TEXT"
             )
             conversationDao.insertMessage(userMessage)
-            
+
             // Get user context for better responses
             val userContext = getUserFitnessContext()
-            
+            val expandedContext = chatContextProvider?.buildFullContextBlock()
+
             // Generate AI response
-            val aiResponseResult = llmService.generateFitnessAdvice(message, userContext)
+            val prompt = if (!expandedContext.isNullOrBlank()) {
+                "Context:\n$expandedContext\n\nQuestion: $message"
+            } else message
+            val aiResponseResult = llmService.generateFitnessAdvice(prompt, userContext)
             
             if (aiResponseResult.isSuccess) {
                 val aiResponse = aiResponseResult.getOrThrow()
@@ -232,13 +237,17 @@ class FitnessCoachAgent(
     
     private suspend fun getUserFitnessContext(): UserFitnessContext {
         val user = userDao.getCurrentUser().firstOrNull()
-        
+        val recentActivity = chatContextProvider?.buildRecentActivityString(user)
+            ?: "Regular running"
+        val trainingHistory = chatContextProvider?.buildTrainingHistoryString(user)
+            ?: "Building base fitness"
+
         return UserFitnessContext(
             experienceLevel = user?.experienceLevel ?: "Beginner",
             goals = user?.runningGoals ?: listOf("General fitness"),
             age = user?.age ?: 30,
-            recentActivity = "Regular running", // This could be calculated from recent runs
-            trainingHistory = "Building base fitness" // This could be derived from user data
+            recentActivity = recentActivity,
+            trainingHistory = trainingHistory
         )
     }
     

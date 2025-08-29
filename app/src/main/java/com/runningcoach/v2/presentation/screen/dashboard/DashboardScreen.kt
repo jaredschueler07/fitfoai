@@ -13,52 +13,35 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.runningcoach.v2.data.local.FITFOAIDatabase
+import com.runningcoach.v2.data.repository.GoogleFitRepository
+import com.runningcoach.v2.data.repository.UserRepository
 import com.runningcoach.v2.domain.model.SampleCoaches
-import com.runningcoach.v2.domain.model.SampleTrainingData
 import com.runningcoach.v2.presentation.components.AppCard
 import com.runningcoach.v2.presentation.components.CompactButton
+import com.runningcoach.v2.presentation.components.ErrorSnackbar
 import com.runningcoach.v2.presentation.components.WorkoutCard
 import com.runningcoach.v2.presentation.components.icons.PlusIcon
 import com.runningcoach.v2.presentation.theme.AppColors
 
 @Composable
 fun DashboardScreen(
-    userName: String = "Runner",
     onStartRun: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val database = remember { com.runningcoach.v2.data.local.FITFOAIDatabase.getDatabase(context) }
-    val googleFitRepository = remember { com.runningcoach.v2.data.repository.GoogleFitRepository(context, database) }
+    val database = remember { FITFOAIDatabase.getDatabase(context) }
+    val userRepository = remember { UserRepository(database) }
+    val googleFitRepository = remember { GoogleFitRepository(context, database) }
     
-    var fitnessData by remember { mutableStateOf<com.runningcoach.v2.data.local.entity.GoogleFitDailySummaryEntity?>(null) }
-    var isLoadingFitnessData by remember { mutableStateOf(false) }
+    val viewModel: DashboardViewModel = viewModel(
+        factory = DashboardViewModel.Factory(userRepository, googleFitRepository)
+    )
     
-    // Load fitness data when component is created
-    LaunchedEffect(Unit) {
-        if (googleFitRepository.isGoogleFitConnected()) {
-            isLoadingFitnessData = true
-            try {
-                // Try to get cached data first
-                val cachedData = googleFitRepository.getTodaysFitnessData()
-                if (cachedData != null) {
-                    fitnessData = cachedData
-                }
-                
-                // Sync fresh data from Google Fit
-                val syncResult = googleFitRepository.syncTodaysFitnessData()
-                if (syncResult.isSuccess) {
-                    fitnessData = syncResult.getOrNull()
-                }
-            } catch (e: Exception) {
-                // Handle error silently for now
-            } finally {
-                isLoadingFitnessData = false
-            }
-        }
-    }
+    val uiState by viewModel.uiState.collectAsState()
     
     LazyColumn(
         modifier = modifier
@@ -82,12 +65,19 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.bodyLarge,
                         color = AppColors.Neutral400
                     )
-                    Text(
-                        text = userName,
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = AppColors.OnBackground
-                    )
+                    if (uiState.isLoadingUser) {
+                        CircularProgressIndicator(
+                            color = AppColors.Primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    } else {
+                        Text(
+                            text = uiState.userName,
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.OnBackground
+                        )
+                    }
                 }
                 
                 // Profile Avatar Placeholder
@@ -99,7 +89,7 @@ fun DashboardScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = userName.take(1).uppercase(),
+                        text = uiState.userName.take(1).uppercase(),
                         style = MaterialTheme.typography.titleLarge,
                         color = AppColors.OnSurface
                     )
@@ -138,7 +128,7 @@ fun DashboardScreen(
                                 color = AppColors.Primary
                             )
                             Text(
-                                text = SampleTrainingData.todaysWorkout.name,
+                                text = uiState.todaysWorkout.name,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = AppColors.Neutral500
                             )
@@ -184,7 +174,7 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         val weekDays = listOf("M", "T", "W", "T", "F", "S", "S")
-                        val activities = listOf(30, 0, 45, 25, 35, 60, 0) // Minutes
+                        val activities = uiState.weeklyActivity // Minutes
                         
                         weekDays.forEachIndexed { index, day ->
                             Column(
@@ -216,7 +206,7 @@ fun DashboardScreen(
         }
 
         // Google Fit Data Section
-        if (fitnessData != null) {
+        if (uiState.fitnessData != null) {
             item {
                 Column {
                     Text(
@@ -228,7 +218,7 @@ fun DashboardScreen(
                     )
                     
                     AppCard {
-                        if (isLoadingFitnessData) {
+                        if (uiState.isLoadingFitnessData) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.Center
@@ -238,7 +228,7 @@ fun DashboardScreen(
                                     modifier = Modifier.padding(16.dp)
                                 )
                             }
-                        } else if (fitnessData != null) {
+                        } else if (uiState.fitnessData != null) {
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
@@ -254,7 +244,7 @@ fun DashboardScreen(
                                         color = AppColors.OnSurface
                                     )
                                     Text(
-                                        text = "${fitnessData!!.steps ?: 0}",
+                                        text = "${uiState.fitnessData.steps ?: 0}",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = AppColors.Primary
@@ -273,7 +263,7 @@ fun DashboardScreen(
                                         color = AppColors.OnSurface
                                     )
                                     Text(
-                                        text = "${String.format("%.1f", (fitnessData!!.distance ?: 0f) * 0.000621371f)} mi",
+                                        text = "${String.format("%.1f", (uiState.fitnessData.distance ?: 0f) * 0.000621371f)} mi",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = AppColors.Primary
@@ -292,7 +282,7 @@ fun DashboardScreen(
                                         color = AppColors.OnSurface
                                     )
                                     Text(
-                                        text = "${fitnessData!!.calories ?: 0}",
+                                        text = "${uiState.fitnessData.calories ?: 0}",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = AppColors.Primary

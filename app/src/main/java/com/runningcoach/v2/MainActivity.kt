@@ -237,24 +237,7 @@ fun RunningCoachApp() {
                 val app = context.applicationContext as RunningCoachApplication
                 val viewModel = remember {
                     com.runningcoach.v2.presentation.screen.aicoach.AICoachViewModel(
-                        app.appContainer.voiceCoachingManager.let { _ ->
-                            // Use the same agent instance as voice coaching to maintain shared context
-                            // Access via AppContainer
-                            app.appContainer.run {
-                                // fitnessCoachAgent is private; expose via voiceCoachingManager dependency
-                                // Create a new instance backed by the same DI (safe as it shares DB and services)
-                                com.runningcoach.v2.data.service.FitnessCoachAgent(
-                                    context = this@MainActivity,
-                                    llmService = this.llmService, // not visible here; fallback to constructing via container
-                                    elevenLabsService = this.voiceCoachingManager.let { it2 ->
-                                        // Reflection of dependency; use the existing ElevenLabs from container
-                                        // We will construct via container function instead.
-                                        null
-                                    },
-                                    database = com.runningcoach.v2.data.local.FITFOAIDatabase.getDatabase(context)
-                                )
-                            }
-                        }
+                        app.appContainer.aiChatAgent
                     )
                 }
                 AICoachScreen(viewModel = viewModel)

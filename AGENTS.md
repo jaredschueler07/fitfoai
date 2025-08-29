@@ -14,6 +14,11 @@
 - Lint: `./gradlew :app:lint` — Android static analysis report.
 - Web prototype: `cd project/runningcoach-ai && npm ci && npm run dev` — local dev server.
 
+## AI Coach Chat & Voice
+- Provider switch: set `AI_PROVIDER=GPT` (or `GEMINI`) in `local.properties`; set `OPENAI_API_KEY` if using GPT.
+- Chat agent: `LLMService` abstraction with `OpenAIService` (GPT) and `GeminiLLMAdapter`.
+- Voice: ElevenLabs TTS; dynamic lines use Gemini by default; can be cached in Room.
+
 ## Coding Style & Naming Conventions
 - Kotlin: 2‑space indent, `camelCase` for vars/functions, `PascalCase` for classes/files, package names `lowercase.dot.separated` (e.g., `com.runningcoach.v2`).
 - Compose: stateless UI where possible; `@Composable` names use `PascalCase` (e.g., `RunTrackingScreen`).
