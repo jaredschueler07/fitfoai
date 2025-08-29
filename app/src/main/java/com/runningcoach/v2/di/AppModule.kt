@@ -7,6 +7,9 @@ import com.runningcoach.v2.data.local.dao.RunSessionDao
 import com.runningcoach.v2.data.repository.RunSessionRepositoryImpl
 import com.runningcoach.v2.data.service.*
 import com.runningcoach.v2.BuildConfig
+import com.runningcoach.v2.data.service.context.ContextPipeline
+import com.runningcoach.v2.data.service.context.KnowledgeBaseContextSource
+import com.runningcoach.v2.data.service.context.UserDataContextSource
 import com.runningcoach.v2.domain.repository.RunSessionRepository
 import com.runningcoach.v2.domain.usecase.*
 import kotlinx.coroutines.CoroutineScope
@@ -91,14 +94,15 @@ class AppContainer(private val context: Context) {
     // Fitness Coach Agents
     // - Chat agent: GPT (or provider configured)
     // - Voice agent: Gemini-backed, for coaching line generation when needed
-    private val chatContextProvider: ChatContextProvider by lazy {
-        ChatContextProvider(database)
-    }
+    private val chatContextProvider: ChatContextProvider by lazy { ChatContextProvider(database) }
+    private val userDataContextSource by lazy { UserDataContextSource(chatContextProvider) }
+    private val kbContextSource by lazy { KnowledgeBaseContextSource(context) }
+    private val contextPipeline by lazy { ContextPipeline(listOf(userDataContextSource, kbContextSource)) }
     val aiChatAgent: FitnessCoachAgent by lazy {
-        FitnessCoachAgent(context, llmChatService, elevenLabsService, database, chatContextProvider)
+        FitnessCoachAgent(context, llmChatService, elevenLabsService, database, chatContextProvider, contextPipeline)
     }
     private val aiVoiceAgent: FitnessCoachAgent by lazy {
-        FitnessCoachAgent(context, llmVoiceService, elevenLabsService, database, chatContextProvider)
+        FitnessCoachAgent(context, llmVoiceService, elevenLabsService, database, chatContextProvider, contextPipeline)
     }
     
     // Voice Coaching Manager

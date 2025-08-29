@@ -290,7 +290,7 @@ fun DashboardScreen(
                                 }
                                 
                                 // Heart Rate (if available)
-                                fitnessData!!.averageHeartRate?.let { heartRate ->
+                                uiState.fitnessData.averageHeartRate?.let { heartRate ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -311,7 +311,7 @@ fun DashboardScreen(
                                 }
                                 
                                 // Weight (if available)
-                                fitnessData!!.weight?.let { weight ->
+                                uiState.fitnessData.weight?.let { weight ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -348,7 +348,7 @@ fun DashboardScreen(
             // Training Plan Section
             Column {
                 Text(
-                    text = "Your Plan: Marathon Training",
+                    text = "Your Plan: ${uiState.trainingPlanName}",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = AppColors.OnSurface,
@@ -358,7 +358,7 @@ fun DashboardScreen(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    SampleTrainingData.upcomingWorkouts.forEach { workout ->
+                    uiState.upcomingWorkouts.forEach { workout ->
                         WorkoutCard {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -408,7 +408,7 @@ fun DashboardScreen(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    SampleTrainingData.pastWorkouts.forEach { workout ->
+                    uiState.pastWorkouts.forEach { workout ->
                         WorkoutCard {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -448,4 +448,13 @@ fun DashboardScreen(
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
+    
+    // Error Snackbar
+    ErrorSnackbar(
+        message = uiState.errorMessage ?: "",
+        isVisible = uiState.errorMessage != null,
+        onDismiss = { viewModel.clearError() },
+        actionLabel = "Retry",
+        onActionClick = { viewModel.retryDataLoad() }
+    )
 }

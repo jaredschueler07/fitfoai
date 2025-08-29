@@ -1,0 +1,29 @@
+{
+  "topics": [
+    {
+      "id": "training-principles",
+      "name": "Training Principles",
+      "file": "training-principles.md",
+      "keywords": ["training", "workout", "plan", "tempo", "interval", "long run", "base"]
+    },
+    {
+      "id": "nutrition-guidelines",
+      "name": "Nutrition",
+      "file": "nutrition-guidelines.md",
+      "keywords": ["nutrition", "diet", "carb", "protein", "fuel", "recovery", "macros", "calorie"]
+    },
+    {
+      "id": "hydration-heat",
+      "name": "Hydration & Heat",
+      "file": "hydration-heat.md",
+      "keywords": ["hydration", "water", "electrolyte", "cramp", "heat", "hot", "sweat"]
+    },
+    {
+      "id": "injury-prevention",
+      "name": "Injury Prevention",
+      "file": "injury-prevention.md",
+      "keywords": ["injury", "pain", "shin", "knee", "hip", "ankle", "overuse", "rest"]
+    }
+  ]
+}
+

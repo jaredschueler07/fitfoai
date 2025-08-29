@@ -16,7 +16,8 @@ class FitnessCoachAgent(
     private val llmService: LLMService,
     private val elevenLabsService: ElevenLabsService,
     private val database: FITFOAIDatabase,
-    private val chatContextProvider: ChatContextProvider? = null
+    private val chatContextProvider: ChatContextProvider? = null,
+    private val contextPipeline: com.runningcoach.v2.data.service.context.ContextPipeline? = null
 ) {
     
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -58,7 +59,8 @@ class FitnessCoachAgent(
 
             // Get user context for better responses
             val userContext = getUserFitnessContext()
-            val expandedContext = chatContextProvider?.buildFullContextBlock()
+            val expandedContext = contextPipeline?.build(message)
+                ?: chatContextProvider?.buildFullContextBlock()
 
             // Generate AI response
             val prompt = if (!expandedContext.isNullOrBlank()) {
