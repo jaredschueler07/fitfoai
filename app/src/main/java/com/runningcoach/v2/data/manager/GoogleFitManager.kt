@@ -16,9 +16,11 @@ import com.google.android.gms.fitness.request.DataReadRequest
 import com.google.android.gms.fitness.request.DataUpdateRequest
 import com.google.android.gms.fitness.request.SessionInsertRequest
 import com.google.android.gms.fitness.request.SessionReadRequest
+import com.google.android.gms.fitness.result.SessionReadResponse
 import com.google.android.gms.tasks.Tasks
 import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.local.entity.*
+import com.runningcoach.v2.data.worker.GoogleFitSyncWorker
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.time.LocalDate
@@ -97,8 +99,6 @@ class GoogleFitManager private constructor(
         .addDataType(DataType.TYPE_SPEED, FitnessOptions.ACCESS_WRITE)
         .addDataType(DataType.TYPE_ACTIVITY_SEGMENT, FitnessOptions.ACCESS_WRITE)
         // Session permissions for run tracking
-        .accessSessionsRead()
-        .accessSessionsWrite()
         .build()
     
     private val googleSignInClient: GoogleSignInClient by lazy {
@@ -435,7 +435,7 @@ class GoogleFitManager private constructor(
                     calories = calories,
                     activeMinutes = moveMinutes,
                     heartPoints = heartPoints,
-                    lastSyncTime = System.currentTimeMillis()
+                    lastSynced = System.currentTimeMillis()
                 )
                 
                 googleFitDao.insertOrUpdateDailySummary(summary)
@@ -507,7 +507,7 @@ class GoogleFitManager private constructor(
                     calories = calories,
                     activeMinutes = 0, // Will be updated separately if needed
                     heartPoints = 0,
-                    lastSyncTime = System.currentTimeMillis()
+                    lastSynced = System.currentTimeMillis()
                 )
                 
                 googleFitDao.insertOrUpdateDailySummary(summary)
@@ -662,9 +662,9 @@ class GoogleFitManager private constructor(
             for (session in sessionResponse.sessions) {
                 // Check if this is a running session
                 val activityType = session.activity
-                if (activityType == FitnessActivities.RUNNING ||
-                    activityType == FitnessActivities.RUNNING_JOGGING ||
-                    activityType == FitnessActivities.RUNNING_TREADMILL) {
+                if (activityType == "running" ||
+                    activityType == "jogging" ||
+                    activityType == "treadmill") {
                     
                     // Extract session data
                     val startTimeMillis = session.getStartTime(TimeUnit.MILLISECONDS)
@@ -769,7 +769,7 @@ class GoogleFitManager private constructor(
                 .setName("FITFOAI Run")
                 .setDescription("Run tracked by FITFOAI")
                 .setIdentifier("fitfoai_run_${runSession.id}")
-                .setActivity(FitnessActivities.RUNNING)
+                .setActivity("running")
                 .setStartTime(runSession.startTime, TimeUnit.MILLISECONDS)
                 .setEndTime(
                     runSession.endTime ?: System.currentTimeMillis(),
@@ -807,7 +807,8 @@ class GoogleFitManager private constructor(
             .setRequiresBatteryNotLow(true)
             .build()
         
-        val syncWorkRequest = PeriodicWorkRequestBuilder<GoogleFitSyncWorker>(
+        val syncWorkRequest = PeriodicWorkRequest.Builder(
+            GoogleFitSyncWorker::class.java,
             SYNC_INTERVAL_HOURS, TimeUnit.HOURS
         )
             .setConstraints(constraints)
