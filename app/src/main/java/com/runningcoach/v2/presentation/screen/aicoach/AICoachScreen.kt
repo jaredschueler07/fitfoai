@@ -76,11 +76,33 @@ fun AICoachScreen(
                     color = AppColors.OnBackground
                 )
                 
-                Text(
-                    text = "Your personal AI fitness coach trained on your data",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.Neutral400,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = "Your personal AI fitness coach trained on your data",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AppColors.Neutral400,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ProviderChip()
+                }
+            }
+        }
+
+        // Error banner (e.g., missing API key)
+        val errorText by if (viewModel != null) viewModel.errorMessage.collectAsState() else remember { mutableStateOf<String?>(null) }
+        if (!errorText.isNullOrBlank()) {
+            Surface(
+                color = AppColors.Neutral800,
+                tonalElevation = 2.dp
+            ) {
+                Text(
+                    text = errorText ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.Primary,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                 )
             }
         }
@@ -216,6 +238,22 @@ fun AICoachScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ProviderChip() {
+    val provider = com.runningcoach.v2.BuildConfig.AI_PROVIDER.ifBlank { "GEMINI" }
+    Surface(
+        color = AppColors.Primary.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Text(
+            text = if (provider.equals("GPT", ignoreCase = true)) "GPT" else "Gemini",
+            style = MaterialTheme.typography.labelSmall,
+            color = AppColors.Primary,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
     }
 }
 

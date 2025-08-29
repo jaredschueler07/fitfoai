@@ -6,6 +6,10 @@ import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.local.dao.RunSessionDao
 import com.runningcoach.v2.data.repository.RunSessionRepositoryImpl
 import com.runningcoach.v2.data.service.*
+import com.runningcoach.v2.BuildConfig
+import com.runningcoach.v2.data.service.context.ContextPipeline
+import com.runningcoach.v2.data.service.context.KnowledgeBaseContextSource
+import com.runningcoach.v2.data.service.context.UserDataContextSource
 import com.runningcoach.v2.domain.repository.RunSessionRepository
 import com.runningcoach.v2.domain.usecase.*
 import kotlinx.coroutines.CoroutineScope
@@ -41,11 +45,7 @@ class AppContainer(private val context: Context) {
     }
 
     private val database: FITFOAIDatabase by lazy {
-        Room.databaseBuilder(
-            context,
-            FITFOAIDatabase::class.java,
-            "fitfoai_database"
-        ).build()
+        FITFOAIDatabase.getDatabase(context)
     }
 
     private val runSessionDao: RunSessionDao by lazy {
@@ -60,10 +60,8 @@ class AppContainer(private val context: Context) {
         SessionRecoveryManager(context)
     }
     
-    // Permission Management
-    val permissionManager: PermissionManager by lazy {
-        PermissionManager(context as androidx.activity.ComponentActivity)
-    }
+    // [ARCH-CHANGE] PermissionManager removed from AppContainer
+    // Create PermissionManager at Activity/Screen level to avoid casting issues
     
     // Audio Management
     private val audioFocusManager: AudioFocusManager by lazy {
@@ -75,19 +73,41 @@ class AppContainer(private val context: Context) {
         ElevenLabsService(httpClient, context)
     }
     
-    // Fitness Coach Agent
-    private val fitnessCoachAgent: FitnessCoachAgent by lazy {
-        FitnessCoachAgent(context, geminiService, elevenLabsService, database)
-    }
-    
-    // Gemini Service
+    // Gemini Service (existing)
     private val geminiService: GeminiService by lazy {
         GeminiService(httpClient)
     }
     
+    // LLM provider selection (separate for chat vs voice)
+    private val llmChatService: LLMService by lazy {
+        when (BuildConfig.AI_PROVIDER.uppercase()) {
+            "GPT" -> OpenAIService(httpClient)
+            else -> GeminiLLMAdapter(geminiService)
+        }
+    }
+
+    // Voice should use Gemini by default (cost/control), independent of chat
+    private val llmVoiceService: LLMService by lazy {
+        GeminiLLMAdapter(geminiService)
+    }
+    
+    // Fitness Coach Agents
+    // - Chat agent: GPT (or provider configured)
+    // - Voice agent: Gemini-backed, for coaching line generation when needed
+    private val chatContextProvider: ChatContextProvider by lazy { ChatContextProvider(database) }
+    private val userDataContextSource by lazy { UserDataContextSource(chatContextProvider) }
+    private val kbContextSource by lazy { KnowledgeBaseContextSource(context) }
+    private val contextPipeline by lazy { ContextPipeline(listOf(userDataContextSource, kbContextSource)) }
+    val aiChatAgent: FitnessCoachAgent by lazy {
+        FitnessCoachAgent(context, llmChatService, elevenLabsService, database, chatContextProvider, contextPipeline)
+    }
+    private val aiVoiceAgent: FitnessCoachAgent by lazy {
+        FitnessCoachAgent(context, llmVoiceService, elevenLabsService, database, chatContextProvider, contextPipeline)
+    }
+    
     // Voice Coaching Manager
     val voiceCoachingManager: VoiceCoachingManager by lazy {
-        VoiceCoachingManager(context, database, elevenLabsService, fitnessCoachAgent)
+        VoiceCoachingManager(context, database, elevenLabsService, aiVoiceAgent)
     }
     
     // Background Location Service (dependency for location tracking)

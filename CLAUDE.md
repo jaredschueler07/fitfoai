@@ -189,6 +189,13 @@ com.runningcoach.v2/
 - **Audio Management**: Music ducking, priority queues, Bluetooth support
 - **Voice Caching**: Room database caching for offline coaching support
 
+### AI Coach Chat (New)
+- **Provider-Agnostic LLM**: `LLMService` abstracts provider choice for chat.
+- **Providers**: `OpenAIService` (GPT) and `GeminiLLMAdapter` (wraps `GeminiService`).
+- **Context Grounding**: `ChatContextProvider` summarizes profile + recent Google Fit data for better answers.
+- **DI**: `aiChatAgent` uses GPT/Gemini per `AI_PROVIDER`; voice pipeline remains Gemini-backed.
+- **Config**: Set `AI_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL` in `local.properties`.
+
 ### UI Components
 - **AppButton**: Consistent button styling across the app
 - **AppCard**: Card-based layout system with athletic blue theme

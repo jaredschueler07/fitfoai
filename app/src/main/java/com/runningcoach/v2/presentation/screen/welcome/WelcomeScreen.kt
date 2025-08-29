@@ -1,6 +1,5 @@
 package com.runningcoach.v2.presentation.screen.welcome
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -12,12 +11,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.runningcoach.v2.presentation.components.PrimaryButton
 import com.runningcoach.v2.presentation.theme.AppColors
+import com.runningcoach.v2.presentation.components.Logo
 
 @Composable
 fun WelcomeScreen(
@@ -40,20 +39,7 @@ fun WelcomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Hero image placeholder (circular like wireframe)
-            Box(
-                modifier = Modifier
-                    .size(192.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.Neutral700),
-                contentAlignment = Alignment.Center
-            ) {
-                // Placeholder for runner image
-                Text(
-                    text = "🏃‍♀️",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = AppColors.OnSurface
-                )
-            }
+            Logo(modifier = Modifier.size(192.dp))
             
             Spacer(modifier = Modifier.height(32.dp))
             

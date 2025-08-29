@@ -198,11 +198,24 @@ This is a personal project, but suggestions and feedback are welcome!
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## ⚙️ AI Provider Configuration
+
+The AI Coach chat uses a provider-agnostic interface with configurable backends.
+
+- Set the provider in `local.properties`:
+  - `AI_PROVIDER=GPT` (uses OpenAI Chat via `OpenAIService`) or `AI_PROVIDER=GEMINI`
+  - `OPENAI_API_KEY=sk-...` (required if `GPT`)
+  - Optional: `OPENAI_MODEL=gpt-4o-mini`
+- Voice coaching remains independent and uses ElevenLabs for TTS. Dynamic voice lines (when needed) use Gemini by default.
+
+See `project/AI_COACH_CHAT_ARCH.md` for details.
+
 ## 🙏 **Acknowledgments**
 
 - **Google Fit API** for health data integration
 - **Spotify Web API** for music integration
-- **Google Gemini** for AI capabilities
+- **Google Gemini** for AI capabilities (and dynamic voice lines)
+- **OpenAI GPT** for chat-based fitness coaching via provider switch
 - **ElevenLabs** for voice synthesis
 - **Jetpack Compose** for modern UI development
 

@@ -826,3 +826,13 @@ data class MigrationPlan(
 **Document Version**: 1.0  
 **Last Updated**: January 2025  
 **Next Review**: February 2025
+### ✅ LLM Abstraction (Chat Agent)
+
+- `LLMService`: common interface for generating responses used by the chat agent and (optionally) voice text.
+- `OpenAIService`: OpenAI Chat Completions client (uses `OPENAI_API_KEY`, `OPENAI_MODEL`).
+- `GeminiLLMAdapter`: adapter that exposes `GeminiService` via `LLMService`.
+
+Config via `local.properties`:
+- `AI_PROVIDER=GPT` or `GEMINI`
+- `OPENAI_API_KEY=sk-...` (only for GPT)
+- `OPENAI_MODEL=gpt-4o-mini` (optional)
