@@ -23,9 +23,12 @@ import com.runningcoach.v2.data.local.converter.Converters
         HealthConnectDailySummaryEntity::class,
         ConnectedAppEntity::class,
         VoiceLineEntity::class,
-        CoachPersonalityEntity::class
+        CoachPersonalityEntity::class,
+        SpotifyTrackCacheEntity::class,
+        WorkoutMusicCorrelationEntity::class,
+        SyncCoordinationEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -41,6 +44,9 @@ abstract class FITFOAIDatabase : RoomDatabase() {
     abstract fun connectedAppDao(): ConnectedAppDao
     abstract fun voiceLineDao(): VoiceLineDao
     abstract fun coachPersonalityDao(): CoachPersonalityDao
+    abstract fun spotifyTrackCacheDao(): SpotifyTrackCacheDao
+    abstract fun workoutMusicCorrelationDao(): WorkoutMusicCorrelationDao
+    abstract fun syncCoordinationDao(): SyncCoordinationDao
     
     companion object {
         @Volatile
@@ -243,6 +249,87 @@ abstract class FITFOAIDatabase : RoomDatabase() {
             }
         }
         
+        /**
+         * Migration from version 8 to 9: Add unified sync coordination entities
+         * Adds WorkoutMusicCorrelationEntity and SyncCoordinationEntity tables for unified sync system
+         */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create WorkoutMusicCorrelationEntity table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `workout_music_correlations` (
+                        `runSessionId` INTEGER NOT NULL,
+                        `spotifyTrackId` TEXT NOT NULL,
+                        `playedAt` INTEGER NOT NULL,
+                        `playDuration` INTEGER NOT NULL,
+                        `bpm` INTEGER,
+                        `userRating` REAL,
+                        `workoutPhase` TEXT NOT NULL,
+                        `trackName` TEXT NOT NULL,
+                        `artistName` TEXT NOT NULL,
+                        `genre` TEXT,
+                        `energy` REAL,
+                        `valence` REAL,
+                        `danceability` REAL,
+                        `runningPaceAtTime` REAL,
+                        `heartRateAtTime` INTEGER,
+                        `performanceImpact` TEXT,
+                        `createdAt` INTEGER NOT NULL DEFAULT 0,
+                        `updatedAt` INTEGER NOT NULL DEFAULT 0,
+                        `correlationSource` TEXT NOT NULL DEFAULT 'AUTOMATIC',
+                        `confidenceScore` REAL NOT NULL DEFAULT 1.0,
+                        `userNotes` TEXT,
+                        PRIMARY KEY(`runSessionId`, `spotifyTrackId`, `playedAt`),
+                        FOREIGN KEY(`runSessionId`) REFERENCES `run_sessions`(`id`) ON DELETE CASCADE
+                    )
+                """)
+                
+                // Create SyncCoordinationEntity table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `sync_coordination` (
+                        `syncType` TEXT NOT NULL,
+                        `userId` INTEGER NOT NULL,
+                        `lastSyncTime` INTEGER NOT NULL,
+                        `nextScheduledSync` INTEGER NOT NULL,
+                        `status` TEXT NOT NULL,
+                        `priority` TEXT NOT NULL,
+                        `attemptCount` INTEGER NOT NULL DEFAULT 0,
+                        `maxAttempts` INTEGER NOT NULL DEFAULT 3,
+                        `lastError` TEXT,
+                        `errorCategory` TEXT,
+                        `itemsSynced` INTEGER NOT NULL DEFAULT 0,
+                        `lastSyncDuration` INTEGER NOT NULL DEFAULT 0,
+                        `averageSyncDuration` INTEGER NOT NULL DEFAULT 0,
+                        `successRate` REAL NOT NULL DEFAULT 1.0,
+                        `enabled` INTEGER NOT NULL DEFAULT 1,
+                        `syncConfig` TEXT,
+                        `createdAt` INTEGER NOT NULL DEFAULT 0,
+                        `updatedAt` INTEGER NOT NULL DEFAULT 0,
+                        `version` INTEGER NOT NULL DEFAULT 1,
+                        PRIMARY KEY(`syncType`, `userId`),
+                        FOREIGN KEY(`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE
+                    )
+                """)
+                
+                // Create indices for WorkoutMusicCorrelationEntity
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_correlation_run_session` ON `workout_music_correlations` (`runSessionId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_correlation_spotify_track` ON `workout_music_correlations` (`spotifyTrackId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_correlation_played_at` ON `workout_music_correlations` (`playedAt`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_correlation_bpm` ON `workout_music_correlations` (`bpm`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_correlation_user_rating` ON `workout_music_correlations` (`userRating`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_correlation_workout_phase` ON `workout_music_correlations` (`workoutPhase`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_correlation_session_phase` ON `workout_music_correlations` (`runSessionId`, `workoutPhase`)")
+                
+                // Create indices for SyncCoordinationEntity
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_sync_coordination_type` ON `sync_coordination` (`syncType`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_sync_coordination_user` ON `sync_coordination` (`userId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_sync_coordination_last_sync` ON `sync_coordination` (`lastSyncTime`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_sync_coordination_next_sync` ON `sync_coordination` (`nextScheduledSync`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_sync_coordination_status` ON `sync_coordination` (`status`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `idx_sync_coordination_priority` ON `sync_coordination` (`priority`)")
+            }
+        }
+        
         fun getDatabase(context: Context): FITFOAIDatabase {
             return INSTANCE ?: synchronized(this) {
                 val builder = Room.databaseBuilder(
@@ -250,7 +337,7 @@ abstract class FITFOAIDatabase : RoomDatabase() {
                     FITFOAIDatabase::class.java,
                     "fitfoai_database"
                 )
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                 .fallbackToDestructiveMigration() // Allow destructive migration if schema mismatch
                 .addCallback(DatabaseCallback())
                 

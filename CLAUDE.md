@@ -466,3 +466,12 @@ This codebase represents a production-ready Android application with advanced ba
 - **WEEKLY** review: Analyze patterns and create prevention strategies
 
 This critical learning log ensures continuous improvement and prevents repeated mistakes across sprints.
+
+## Long Task Updates
+When working on complex or long-running tasks, provide periodic updates to keep the user informed:
+- Send updates on what you're currently doing and why
+- Report progress at significant milestones or decision points
+- Communicate when switching between major subtasks
+- Explain any unexpected issues or changes in approach
+- Keep updates concise but informative
+- If you encountered an error or issue, make sure you add to the common issues section. 

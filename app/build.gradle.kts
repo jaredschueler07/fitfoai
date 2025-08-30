@@ -40,7 +40,6 @@ android {
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"${localProperties.getProperty("SPOTIFY_CLIENT_ID", "")}\"")
         buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"${localProperties.getProperty("SPOTIFY_CLIENT_SECRET", "")}\"")
         buildConfigField("String", "SPOTIFY_REDIRECT_URI", "\"${localProperties.getProperty("SPOTIFY_REDIRECT_URI", "")}\"")
-        buildConfigField("String", "GOOGLE_FIT_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_FIT_CLIENT_ID", "")}\"")
         // Git SHA for build identification (used in debug banner/logs)
         val gitSha = try {
             val stdout = ByteArrayOutputStream()
@@ -156,7 +155,6 @@ dependencies {
     implementation(libs.google.maps)
     implementation(libs.google.maps.compose)
     implementation(libs.google.play.services.auth)
-    implementation(libs.google.play.services.fitness)
     implementation(libs.google.play.services.location)
     implementation(libs.google.play.services.auth.api.phone)
     

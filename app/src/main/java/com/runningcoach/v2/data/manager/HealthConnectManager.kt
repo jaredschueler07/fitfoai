@@ -16,6 +16,7 @@ import androidx.work.*
 import com.runningcoach.v2.data.local.FITFOAIDatabase
 import com.runningcoach.v2.data.local.entity.*
 import com.runningcoach.v2.data.service.HealthConnectPermissionManager
+import com.runningcoach.v2.data.service.UnifiedErrorHandler
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.time.*
@@ -81,13 +82,21 @@ class HealthConnectManager private constructor(
     private val _lastSyncTime = MutableStateFlow<Long?>(null)
     val lastSyncTime: StateFlow<Long?> = _lastSyncTime.asStateFlow()
     
-    // Error handling
-    private val _lastError = MutableStateFlow<HealthConnectError?>(null)
-    val lastError: StateFlow<HealthConnectError?> = _lastError.asStateFlow()
+    // Error handling - using UnifiedErrorHandler
+    private val unifiedErrorHandler = UnifiedErrorHandler.getInstance()
+    private val _lastError = MutableStateFlow<UnifiedErrorHandler.UnifiedError?>(null)
+    val lastError: StateFlow<UnifiedErrorHandler.UnifiedError?> = _lastError.asStateFlow()
+    
+    // System status exposure
+    val systemStatus = unifiedErrorHandler.systemStatus
+    val errorHistory = unifiedErrorHandler.errorHistory
     
     init {
         // Check initial connection state
         checkConnectionState()
+        
+        // Update system status
+        updateHealthConnectSystemStatus()
         
         // Setup periodic sync if connected
         if (_connectionState.value == ConnectionState.CONNECTED) {
@@ -112,20 +121,7 @@ class HealthConnectManager private constructor(
         ERROR
     }
     
-    data class HealthConnectError(
-        val code: ErrorCode,
-        val message: String,
-        val timestamp: Long = System.currentTimeMillis()
-    ) {
-        enum class ErrorCode {
-            UNAVAILABLE,
-            PERMISSION_DENIED,
-            NETWORK_ERROR,
-            API_ERROR,
-            DATA_NOT_AVAILABLE,
-            UNKNOWN
-        }
-    }
+    // Remove HealthConnectError - now using UnifiedError from UnifiedErrorHandler
     
     // ========== CONNECTION MANAGEMENT ==========
     
@@ -146,19 +142,21 @@ class HealthConnectManager private constructor(
                 }
                 HealthConnectPermissionManager.HealthConnectAvailability.NEEDS_UPDATE -> {
                     _connectionState.value = ConnectionState.ERROR
-                    _lastError.value = HealthConnectError(
-                        HealthConnectError.ErrorCode.UNAVAILABLE,
-                        "Health Connect needs update"
+                    val error = unifiedErrorHandler.handleHealthConnectError(
+                        Exception("Health Connect needs update"), "connection"
                     )
-                    return@withContext Result.failure(Exception("Health Connect needs update"))
+                    _lastError.value = error
+                    return@withContext Result.failure(Exception(error.message))
                 }
                 HealthConnectPermissionManager.HealthConnectAvailability.AVAILABLE -> {
                     if (permissionManager.hasRequiredPermissions()) {
                         _connectionState.value = ConnectionState.CONNECTED
+                        updateHealthConnectSystemStatus()
                         onConnectionSuccess()
                         Result.success(Unit)
                     } else {
                         _connectionState.value = ConnectionState.AWAITING_PERMISSIONS
+                        updateHealthConnectSystemStatus()
                         Result.failure(Exception("Permissions required"))
                     }
                 }
@@ -170,10 +168,8 @@ class HealthConnectManager private constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Error initiating connection", e)
             _connectionState.value = ConnectionState.ERROR
-            _lastError.value = HealthConnectError(
-                HealthConnectError.ErrorCode.UNKNOWN,
-                e.message ?: "Connection failed"
-            )
+            val error = unifiedErrorHandler.handleHealthConnectError(e, "connection")
+            _lastError.value = error
             Result.failure(e)
         }
     }
@@ -187,10 +183,10 @@ class HealthConnectManager private constructor(
             onConnectionSuccess()
         } else {
             _connectionState.value = ConnectionState.DISCONNECTED
-            _lastError.value = HealthConnectError(
-                HealthConnectError.ErrorCode.PERMISSION_DENIED,
-                "Health Connect permissions denied"
+            val error = unifiedErrorHandler.handleHealthConnectError(
+                SecurityException("Health Connect permissions denied"), "permissions"
             )
+            _lastError.value = error
         }
     }
     
@@ -281,10 +277,8 @@ class HealthConnectManager private constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Full sync failed", e)
             _syncState.value = SyncState.ERROR
-            _lastError.value = HealthConnectError(
-                HealthConnectError.ErrorCode.API_ERROR,
-                "Sync failed: ${e.message}"
-            )
+            val error = unifiedErrorHandler.handleHealthConnectError(e, "full sync")
+            _lastError.value = error
             Result.failure(e)
         }
     }
@@ -312,6 +306,8 @@ class HealthConnectManager private constructor(
             Log.d(TAG, "Synced steps data: $totalSteps steps")
         } catch (e: Exception) {
             Log.e(TAG, "Error syncing steps data", e)
+            val error = unifiedErrorHandler.handleHealthConnectError(e, "steps sync")
+            _lastError.value = error
             throw e
         }
     }
@@ -339,6 +335,8 @@ class HealthConnectManager private constructor(
             Log.d(TAG, "Synced distance data: $totalDistanceMeters meters")
         } catch (e: Exception) {
             Log.e(TAG, "Error syncing distance data", e)
+            val error = unifiedErrorHandler.handleHealthConnectError(e, "distance sync")
+            _lastError.value = error
             throw e
         }
     }
@@ -366,6 +364,8 @@ class HealthConnectManager private constructor(
             Log.d(TAG, "Synced calories data: $totalCalories calories")
         } catch (e: Exception) {
             Log.e(TAG, "Error syncing calories data", e)
+            val error = unifiedErrorHandler.handleHealthConnectError(e, "calories sync")
+            _lastError.value = error
             throw e
         }
     }
@@ -402,7 +402,9 @@ class HealthConnectManager private constructor(
             }
         } catch (e: Exception) {
             Log.w(TAG, "No heart rate data available", e)
-            // Heart rate data may not be available, don't throw
+            // Heart rate data may not be available, track error but don't throw
+            val error = unifiedErrorHandler.handleHealthConnectError(e, "heart rate sync")
+            // Note: Not setting _lastError for non-critical data that may not be available
         }
     }
     
@@ -578,6 +580,8 @@ class HealthConnectManager private constructor(
             
         } catch (e: Exception) {
             Log.e(TAG, "Error writing run session to Health Connect", e)
+            val error = unifiedErrorHandler.handleHealthConnectError(e, "write run session")
+            _lastError.value = error
             Result.failure(e)
         }
     }
@@ -718,6 +722,19 @@ class HealthConnectManager private constructor(
         }
         
         healthConnectDao.insertOrUpdateDailySummary(summary)
+    }
+    
+    private fun updateHealthConnectSystemStatus() {
+        val isAvailable = permissionManager.checkAvailability() == 
+            HealthConnectPermissionManager.HealthConnectAvailability.AVAILABLE
+        val isConnected = permissionManager.hasRequiredPermissions()
+        
+        unifiedErrorHandler.updateSystemStatus { status ->
+            status.copy(
+                healthConnectAvailable = isAvailable,
+                healthConnectConnected = isConnected
+            )
+        }
     }
     
     // ========== DATA ACCESS ==========

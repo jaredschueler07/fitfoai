@@ -44,12 +44,18 @@ class SpotifySdkService(private val context: Context) {
         )
     }
 
+    // Error handling - using UnifiedErrorHandler
+    private val unifiedErrorHandler = UnifiedErrorHandler.getInstance()
+    
     // Connection state
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
     private val _connectionStatus = MutableStateFlow("Not connected")
     val connectionStatus: StateFlow<String> = _connectionStatus.asStateFlow()
+    
+    private val _lastError = MutableStateFlow<UnifiedErrorHandler.UnifiedError?>(null)
+    val lastError: StateFlow<UnifiedErrorHandler.UnifiedError?> = _lastError.asStateFlow()
 
     // Spotify App Remote instance
     private var spotifyAppRemote: SpotifyAppRemote? = null
@@ -66,6 +72,14 @@ class SpotifySdkService(private val context: Context) {
     private var playerContextSubscription: Subscription<PlayerContext>? = null
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    
+    // System status exposure
+    val systemStatus = unifiedErrorHandler.systemStatus
+    val errorHistory = unifiedErrorHandler.errorHistory
+    
+    init {
+        updateSpotifySystemStatus()
+    }
 
     /**
      * Initialize OAuth flow with Spotify Auth SDK
@@ -101,19 +115,29 @@ class SpotifySdkService(private val context: Context) {
                 }
                 AuthorizationResponse.Type.ERROR,
                 AuthorizationResponse.Type.EMPTY -> {
-                    val error = SpotifyErrorHandler.handleAuthError(response)
-                    _connectionStatus.value = SpotifyErrorHandler.getUserFriendlyMessage(error)
-                    Result.failure(error)
+                    val spotifyError = SpotifyErrorHandler.handleAuthError(response)
+                    val unifiedError = unifiedErrorHandler.handleSpotifyError(spotifyError)
+                    _connectionStatus.value = unifiedError.userMessage
+                    _lastError.value = unifiedError
+                    updateSpotifySystemStatus()
+                    Result.failure(spotifyError)
                 }
                 else -> {
-                    val error = SpotifyErrorHandler.SpotifyError.UnknownError("Unexpected authorization response")
-                    _connectionStatus.value = SpotifyErrorHandler.getUserFriendlyMessage(error)
-                    Result.failure(error)
+                    val spotifyError = SpotifyErrorHandler.SpotifyError.UnknownError("Unexpected authorization response")
+                    val unifiedError = unifiedErrorHandler.handleSpotifyError(spotifyError)
+                    _connectionStatus.value = unifiedError.userMessage
+                    _lastError.value = unifiedError
+                    updateSpotifySystemStatus()
+                    Result.failure(spotifyError)
                 }
             }
         }
 
-        return Result.failure(SpotifyErrorHandler.SpotifyError.AuthorizationError("Invalid request code"))
+        val spotifyError = SpotifyErrorHandler.SpotifyError.AuthorizationError("Invalid request code")
+        val unifiedError = unifiedErrorHandler.handleSpotifyError(spotifyError)
+        _lastError.value = unifiedError
+        updateSpotifySystemStatus()
+        return Result.failure(spotifyError)
     }
 
     /**
@@ -124,8 +148,11 @@ class SpotifySdkService(private val context: Context) {
 
         // Check if Spotify app is installed first
         if (!isSpotifyInstalled()) {
-            val error = SpotifyErrorHandler.SpotifyError.SpotifyAppNotInstalledError()
-            _connectionStatus.value = SpotifyErrorHandler.getUserFriendlyMessage(error)
+            val spotifyError = SpotifyErrorHandler.SpotifyError.SpotifyAppNotInstalledError()
+            val unifiedError = unifiedErrorHandler.handleSpotifyError(spotifyError)
+            _connectionStatus.value = unifiedError.userMessage
+            _lastError.value = unifiedError
+            updateSpotifySystemStatus()
             return
         }
 
@@ -139,16 +166,21 @@ class SpotifySdkService(private val context: Context) {
                 spotifyAppRemote = appRemote
                 _isConnected.value = true
                 _connectionStatus.value = "Connected to Spotify"
+                _lastError.value = null // Clear previous errors on successful connection
+                updateSpotifySystemStatus()
                 setupSubscriptions()
             }
 
             override fun onFailure(error: Throwable) {
                 val spotifyError = SpotifyErrorHandler.handleConnectionError(error)
-                _connectionStatus.value = SpotifyErrorHandler.getUserFriendlyMessage(spotifyError)
+                val unifiedError = unifiedErrorHandler.handleSpotifyError(spotifyError)
+                _connectionStatus.value = unifiedError.userMessage
+                _lastError.value = unifiedError
                 _isConnected.value = false
+                updateSpotifySystemStatus()
 
                 // Log technical details for debugging
-                println("Spotify connection failed: ${spotifyError.message}")
+                println("Spotify connection failed: ${unifiedError.message}")
                 error.printStackTrace()
             }
         })
@@ -217,17 +249,29 @@ class SpotifySdkService(private val context: Context) {
                         Result.success("Playback $action")
                     }
                     CallResult.Result.ERROR -> {
-                        val error = SpotifyErrorHandler.handleApiResultError("Toggle playback", result.error)
-                        Result.failure(error)
+                        val spotifyError = SpotifyErrorHandler.handleApiResultError("Toggle playback", result.error)
+                        val unifiedError = unifiedErrorHandler.handleSpotifyError(spotifyError)
+                        _lastError.value = unifiedError
+                        Result.failure(spotifyError)
                     }
                     else -> {
-                        Result.failure(SpotifyErrorHandler.SpotifyError.PlaybackError("Playback control failed with unknown result"))
+                        val spotifyError = SpotifyErrorHandler.SpotifyError.PlaybackError("Playback control failed with unknown result")
+                        val unifiedError = unifiedErrorHandler.handleSpotifyError(spotifyError)
+                        _lastError.value = unifiedError
+                        Result.failure(spotifyError)
                     }
                 }
-            } ?: Result.failure(SpotifyErrorHandler.SpotifyError.ConnectionError("Spotify not connected"))
+            } ?: run {
+                val spotifyError = SpotifyErrorHandler.SpotifyError.ConnectionError("Spotify not connected")
+                val unifiedError = unifiedErrorHandler.handleSpotifyError(spotifyError)
+                _lastError.value = unifiedError
+                Result.failure(spotifyError)
+            }
         } catch (e: Exception) {
-            val error = SpotifyErrorHandler.handleGenericError("Toggle playback", e)
-            Result.failure(error)
+            val spotifyError = SpotifyErrorHandler.handleGenericError("Toggle playback", e)
+            val unifiedError = unifiedErrorHandler.handleSpotifyError(spotifyError)
+            _lastError.value = unifiedError
+            Result.failure(spotifyError)
         }
     }
 
@@ -347,6 +391,8 @@ class SpotifySdkService(private val context: Context) {
         _connectionStatus.value = "Disconnected"
         _currentTrack.value = null
         _playbackState.value = null
+        _lastError.value = null
+        updateSpotifySystemStatus()
     }
 
     /**
@@ -398,4 +444,16 @@ class SpotifySdkService(private val context: Context) {
         val isActive: Boolean,
         val volumePercent: Int
     )
+
+    private fun updateSpotifySystemStatus() {
+        val isAvailable = isSpotifyInstalled()
+        val isConnected = _isConnected.value
+
+        unifiedErrorHandler.updateSystemStatus { status ->
+            status.copy(
+                spotifyAvailable = isAvailable,
+                spotifyConnected = isConnected
+            )
+        }
+    }
 }
