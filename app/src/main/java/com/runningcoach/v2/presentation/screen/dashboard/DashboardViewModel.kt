@@ -3,9 +3,9 @@ package com.runningcoach.v2.presentation.screen.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.runningcoach.v2.data.local.entity.GoogleFitDailySummaryEntity
+import com.runningcoach.v2.data.local.entity.HealthConnectDailySummaryEntity
 import com.runningcoach.v2.data.local.entity.UserEntity
-import com.runningcoach.v2.data.repository.GoogleFitRepository
+import com.runningcoach.v2.data.repository.HealthConnectRepository
 import com.runningcoach.v2.data.repository.UserRepository
 import com.runningcoach.v2.domain.model.CompletedWorkout
 import com.runningcoach.v2.domain.model.SampleTrainingData
@@ -19,7 +19,7 @@ data class DashboardUiState(
     val todaysWorkout: Workout = SampleTrainingData.todaysWorkout,
     val upcomingWorkouts: List<Workout> = SampleTrainingData.upcomingWorkouts,
     val pastWorkouts: List<CompletedWorkout> = SampleTrainingData.pastWorkouts,
-    val fitnessData: GoogleFitDailySummaryEntity? = null,
+    val fitnessData: HealthConnectDailySummaryEntity? = null,
     val weeklyActivity: List<Int> = listOf(30, 0, 45, 25, 35, 60, 0), // Minutes per day
     val isLoadingUser: Boolean = true,
     val isLoadingFitnessData: Boolean = false,
@@ -29,7 +29,7 @@ data class DashboardUiState(
 
 class DashboardViewModel(
     private val userRepository: UserRepository,
-    private val googleFitRepository: GoogleFitRepository
+    private val healthConnectRepository: HealthConnectRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -69,34 +69,14 @@ class DashboardViewModel(
 
     private fun loadFitnessData() {
         viewModelScope.launch {
-            if (googleFitRepository.isGoogleFitConnected()) {
+            if (healthConnectRepository.isHealthConnectConnected()) {
                 try {
                     _uiState.update { it.copy(isLoadingFitnessData = true) }
                     
-                    // Try to get cached data first
-                    val cachedData = googleFitRepository.getTodaysFitnessData()
-                    if (cachedData != null) {
-                        _uiState.update { it.copy(fitnessData = cachedData) }
-                    }
-                    
-                    // Sync fresh data from Google Fit
-                    val syncResult = googleFitRepository.syncTodaysFitnessData()
-                    if (syncResult.isSuccess) {
-                        val freshData = syncResult.getOrNull()
-                        _uiState.update { 
-                            it.copy(
-                                fitnessData = freshData,
-                                isLoadingFitnessData = false
-                            ) 
-                        }
-                    } else {
-                        _uiState.update { 
-                            it.copy(
-                                isLoadingFitnessData = false,
-                                errorMessage = "Failed to sync fitness data"
-                            ) 
-                        }
-                    }
+                    // Load today's cached Health Connect data
+                    val today = healthConnectRepository.getTodaysHealthData()
+                    if (today != null) _uiState.update { it.copy(fitnessData = today) }
+                    _uiState.update { it.copy(isLoadingFitnessData = false) }
                 } catch (e: Exception) {
                     _uiState.update { 
                         it.copy(
@@ -138,12 +118,12 @@ class DashboardViewModel(
 
     class Factory(
         private val userRepository: UserRepository,
-        private val googleFitRepository: GoogleFitRepository
+        private val healthConnectRepository: HealthConnectRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
-                return DashboardViewModel(userRepository, googleFitRepository) as T
+                return DashboardViewModel(userRepository, healthConnectRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
