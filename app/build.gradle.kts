@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.io.ByteArrayOutputStream
 
 plugins {
     alias(libs.plugins.android.application)
@@ -39,8 +40,20 @@ android {
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"${localProperties.getProperty("SPOTIFY_CLIENT_ID", "")}\"")
         buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"${localProperties.getProperty("SPOTIFY_CLIENT_SECRET", "")}\"")
         buildConfigField("String", "SPOTIFY_REDIRECT_URI", "\"${localProperties.getProperty("SPOTIFY_REDIRECT_URI", "")}\"")
-        buildConfigField("String", "GOOGLE_FIT_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_FIT_CLIENT_ID", "")}\"")
-        
+        // Git SHA for build identification (used in debug banner/logs)
+        val gitSha = try {
+            val stdout = ByteArrayOutputStream()
+            exec {
+                commandLine("git", "rev-parse", "--short", "HEAD")
+                standardOutput = stdout
+            }
+            stdout.toString().trim().ifBlank { "unknown" }
+        } catch (e: Exception) {
+            "unknown"
+        }
+
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
+
         // AI Provider selection (GEMINI or GPT)
         buildConfigField("String", "AI_PROVIDER", "\"${localProperties.getProperty("AI_PROVIDER", "GEMINI")}\"")
         buildConfigField("String", "OPENAI_MODEL", "\"${localProperties.getProperty("OPENAI_MODEL", "gpt-4o-mini")}\"")
@@ -142,9 +155,11 @@ dependencies {
     implementation(libs.google.maps)
     implementation(libs.google.maps.compose)
     implementation(libs.google.play.services.auth)
-    implementation(libs.google.play.services.fitness)
     implementation(libs.google.play.services.location)
     implementation(libs.google.play.services.auth.api.phone)
+    
+    // Health Connect
+    implementation(libs.health.connect.client)
     
     // Audio & Media for Voice Coaching
     implementation("androidx.media:media:1.7.0")
@@ -154,6 +169,10 @@ dependencies {
     
     // HTTP Client for ElevenLabs API (using existing Ktor)
     // ElevenLabs API integration handled via existing Ktor client
+
+    // Spotify Android SDK
+    implementation(libs.spotify.auth)
+    implementation(libs.spotify.app.remote)
 
     // Testing
     testImplementation(libs.junit)

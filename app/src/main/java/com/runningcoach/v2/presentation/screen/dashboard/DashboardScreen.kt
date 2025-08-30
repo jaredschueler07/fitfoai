@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.runningcoach.v2.data.local.FITFOAIDatabase
-import com.runningcoach.v2.data.repository.GoogleFitRepository
+import com.runningcoach.v2.data.repository.HealthConnectRepository
 import com.runningcoach.v2.data.repository.UserRepository
 import com.runningcoach.v2.domain.model.SampleCoaches
 import com.runningcoach.v2.presentation.components.AppCard
@@ -34,7 +34,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = viewModel(
         factory = DashboardViewModel.Factory(
             userRepository = UserRepository(FITFOAIDatabase.getDatabase(LocalContext.current)),
-            googleFitRepository = GoogleFitRepository(LocalContext.current, FITFOAIDatabase.getDatabase(LocalContext.current))
+            healthConnectRepository = HealthConnectRepository(LocalContext.current, FITFOAIDatabase.getDatabase(LocalContext.current))
         )
     )
 ) {
@@ -288,7 +288,7 @@ fun DashboardScreen(
                                 }
                                 
                                 // Heart Rate (if available)
-                                uiState.fitnessData?.averageHeartRate?.let { heartRate ->
+                                uiState.fitnessData?.avgHeartRate?.let { heartRate ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,

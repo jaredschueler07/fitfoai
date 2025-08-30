@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "e1a0a73cb3332b40d648be14f53f56fb",
+    "identityHash": "e8141eb021887e05901d767a699fdc33",
     "entities": [
       {
         "tableName": "users",
@@ -92,7 +92,7 @@
       },
       {
         "tableName": "run_sessions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` INTEGER NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER, `duration` INTEGER, `distance` REAL, `averagePace` REAL, `averageHeartRate` INTEGER, `maxHeartRate` INTEGER, `caloriesBurned` INTEGER, `route` TEXT, `weather` TEXT, `notes` TEXT, `isCompleted` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` INTEGER NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER, `duration` INTEGER NOT NULL, `distance` REAL NOT NULL, `avgSpeed` REAL, `maxSpeed` REAL, `avgPace` REAL, `bestPace` REAL, `avgHeartRate` INTEGER, `maxHeartRate` INTEGER, `minHeartRate` INTEGER, `heartRateZones` TEXT, `totalElevationGain` REAL, `totalElevationLoss` REAL, `maxElevation` REAL, `minElevation` REAL, `calories` INTEGER, `steps` INTEGER, `cadence` INTEGER, `route` TEXT, `routeName` TEXT, `temperature` REAL, `humidity` INTEGER, `weatherCondition` TEXT, `notes` TEXT, `rating` INTEGER, `perceivedEffort` INTEGER, `trainingPlanId` INTEGER, `workoutType` TEXT, `googleFitSessionId` TEXT, `syncedWithGoogleFit` INTEGER NOT NULL, `lastSyncTime` INTEGER, `syncError` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`userId`) REFERENCES `users`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -122,23 +122,41 @@
             "fieldPath": "duration",
             "columnName": "duration",
             "affinity": "INTEGER",
-            "notNull": false
+            "notNull": true
           },
           {
             "fieldPath": "distance",
             "columnName": "distance",
             "affinity": "REAL",
-            "notNull": false
+            "notNull": true
           },
           {
-            "fieldPath": "averagePace",
-            "columnName": "averagePace",
+            "fieldPath": "avgSpeed",
+            "columnName": "avgSpeed",
             "affinity": "REAL",
             "notNull": false
           },
           {
-            "fieldPath": "averageHeartRate",
-            "columnName": "averageHeartRate",
+            "fieldPath": "maxSpeed",
+            "columnName": "maxSpeed",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "avgPace",
+            "columnName": "avgPace",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "bestPace",
+            "columnName": "bestPace",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "avgHeartRate",
+            "columnName": "avgHeartRate",
             "affinity": "INTEGER",
             "notNull": false
           },
@@ -149,8 +167,56 @@
             "notNull": false
           },
           {
-            "fieldPath": "caloriesBurned",
-            "columnName": "caloriesBurned",
+            "fieldPath": "minHeartRate",
+            "columnName": "minHeartRate",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "heartRateZones",
+            "columnName": "heartRateZones",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "totalElevationGain",
+            "columnName": "totalElevationGain",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "totalElevationLoss",
+            "columnName": "totalElevationLoss",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "maxElevation",
+            "columnName": "maxElevation",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "minElevation",
+            "columnName": "minElevation",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "calories",
+            "columnName": "calories",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "steps",
+            "columnName": "steps",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "cadence",
+            "columnName": "cadence",
             "affinity": "INTEGER",
             "notNull": false
           },
@@ -161,8 +227,26 @@
             "notNull": false
           },
           {
-            "fieldPath": "weather",
-            "columnName": "weather",
+            "fieldPath": "routeName",
+            "columnName": "routeName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "temperature",
+            "columnName": "temperature",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "humidity",
+            "columnName": "humidity",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "weatherCondition",
+            "columnName": "weatherCondition",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -173,14 +257,62 @@
             "notNull": false
           },
           {
-            "fieldPath": "isCompleted",
-            "columnName": "isCompleted",
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "perceivedEffort",
+            "columnName": "perceivedEffort",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "trainingPlanId",
+            "columnName": "trainingPlanId",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "workoutType",
+            "columnName": "workoutType",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "googleFitSessionId",
+            "columnName": "googleFitSessionId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "syncedWithGoogleFit",
+            "columnName": "syncedWithGoogleFit",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
+            "fieldPath": "lastSyncTime",
+            "columnName": "lastSyncTime",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "syncError",
+            "columnName": "syncError",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
             "fieldPath": "createdAt",
             "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -191,8 +323,57 @@
             "id"
           ]
         },
-        "indices": [],
-        "foreignKeys": []
+        "indices": [
+          {
+            "name": "index_run_sessions_userId",
+            "unique": false,
+            "columnNames": [
+              "userId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_run_sessions_userId` ON `${TABLE_NAME}` (`userId`)"
+          },
+          {
+            "name": "index_run_sessions_startTime",
+            "unique": false,
+            "columnNames": [
+              "startTime"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_run_sessions_startTime` ON `${TABLE_NAME}` (`startTime`)"
+          },
+          {
+            "name": "index_run_sessions_googleFitSessionId",
+            "unique": true,
+            "columnNames": [
+              "googleFitSessionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_run_sessions_googleFitSessionId` ON `${TABLE_NAME}` (`googleFitSessionId`)"
+          },
+          {
+            "name": "index_run_sessions_syncedWithGoogleFit",
+            "unique": false,
+            "columnNames": [
+              "syncedWithGoogleFit"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_run_sessions_syncedWithGoogleFit` ON `${TABLE_NAME}` (`syncedWithGoogleFit`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "users",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "userId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
       },
       {
         "tableName": "training_plans",
@@ -320,7 +501,7 @@
       },
       {
         "tableName": "google_fit_daily_summary",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` INTEGER NOT NULL, `date` INTEGER NOT NULL, `steps` INTEGER, `distance` REAL, `calories` INTEGER, `activeMinutes` INTEGER, `restingHeartRate` INTEGER, `averageHeartRate` REAL, `maxHeartRate` INTEGER, `weight` REAL, `height` REAL, `syncStatus` TEXT NOT NULL, `lastSynced` INTEGER, `errorMessage` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`userId`) REFERENCES `users`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` INTEGER NOT NULL, `date` INTEGER NOT NULL, `steps` INTEGER, `distance` REAL, `calories` INTEGER, `activeMinutes` INTEGER, `restingHeartRate` INTEGER, `avgHeartRate` REAL, `maxHeartRate` REAL, `minHeartRate` REAL, `heartPoints` INTEGER, `weight` REAL, `height` REAL, `syncStatus` TEXT NOT NULL, `lastSynced` INTEGER, `errorMessage` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`userId`) REFERENCES `users`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -371,14 +552,26 @@
             "notNull": false
           },
           {
-            "fieldPath": "averageHeartRate",
-            "columnName": "averageHeartRate",
+            "fieldPath": "avgHeartRate",
+            "columnName": "avgHeartRate",
             "affinity": "REAL",
             "notNull": false
           },
           {
             "fieldPath": "maxHeartRate",
             "columnName": "maxHeartRate",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "minHeartRate",
+            "columnName": "minHeartRate",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "heartPoints",
+            "columnName": "heartPoints",
             "affinity": "INTEGER",
             "notNull": false
           },
@@ -914,7 +1107,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e1a0a73cb3332b40d648be14f53f56fb')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e8141eb021887e05901d767a699fdc33')"
     ]
   }
 }

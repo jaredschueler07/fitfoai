@@ -103,7 +103,7 @@ class GoogleFitRepository(
                     steps = fitnessData.steps,
                     distance = fitnessData.distance,
                     calories = fitnessData.calories,
-                    averageHeartRate = fitnessData.heartRate,
+                    avgHeartRate = fitnessData.heartRate?.toFloat(),
                     weight = fitnessData.weight,
                     height = fitnessData.height,
                     syncStatus = "SYNCED",
@@ -118,7 +118,7 @@ class GoogleFitRepository(
                     steps = fitnessData.steps,
                     distance = fitnessData.distance,
                     calories = fitnessData.calories,
-                    averageHeartRate = fitnessData.heartRate,
+                    avgHeartRate = fitnessData.heartRate?.toFloat(),
                     weight = fitnessData.weight,
                     height = fitnessData.height,
                     syncStatus = "SYNCED",
@@ -133,7 +133,7 @@ class GoogleFitRepository(
             
             // Update user profile with latest body measurements
             updateUserProfileWithFitnessData(currentUser, fitnessData)
-            
+
             Log.i(TAG, "Successfully synced fitness data for user ${currentUser.id}")
             
                 Result.success(dailySummary.copy(id = summaryId))

@@ -29,13 +29,30 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" 
         android:minSdkVersion="33" />
     
-    <!-- Google Fit and health data permissions -->
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <!-- Health Connect permissions -->
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.WRITE_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_SPEED" />
+    <uses-permission android:name="android.permission.health.WRITE_SPEED" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED" />
     
     <!-- Hardware requirements -->
     <uses-feature android:name="android.hardware.location.gps" android:required="true" />
     <uses-feature android:name="android.hardware.location.network" android:required="false" />
+
+    <!-- Health Connect queries -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+        <!-- Spotify Android SDK queries -->
+        <package android:name="com.spotify.music" />
+    </queries>
 
     <application
         android:name=".RunningCoachApplication"
@@ -89,6 +106,15 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="shortService"
             tools:node="merge" />
+
+        <!-- Spotify Broadcast Receiver for detecting Spotify app activity -->
+        <receiver android:name=".data.service.SpotifyBroadcastReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.spotify.music.active" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

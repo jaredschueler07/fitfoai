@@ -1,56 +1,78 @@
 package com.runningcoach.v2.data.service
 
 import android.content.Context
-import android.media.AudioManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
-import android.media.MediaPlayer
+import android.media.AudioManager
 import android.os.Build
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
-/**
- * Manages audio focus and music ducking for voice coaching
- */
 class AudioFocusManager(private val context: Context) {
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    private val _audioFocusState = MutableStateFlow(AudioFocusState.NONE)
-    val audioFocusState: StateFlow<AudioFocusState> = _audioFocusState
-    
-    private var mediaPlayer: MediaPlayer? = null
     private var focusRequest: AudioFocusRequest? = null
-    
-    fun configureForVoiceCoaching() {
-        // Configure audio attributes for voice coaching
-    }
-    
-    suspend fun playCoachingAudio(audioData: ByteArray, onComplete: () -> Unit) {
-        // Implementation stub
-        onComplete()
-    }
-    
-    fun stopCurrentPlayback() {
-        mediaPlayer?.stop()
-        mediaPlayer?.release()
-        mediaPlayer = null
-    }
-    
-    fun cleanup() {
-        stopCurrentPlayback()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+    private var hasFocus = false
+
+    private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                // Stop playback - another app has taken over
+                hasFocus = false
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                // Pause playback - temporarily lost focus
+                hasFocus = false
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                // Lower volume - we're allowed to play, but quietly
+                // Not the primary use case for coaching, but handled
+            }
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                // Resume playback or raise volume
+                hasFocus = true
+            }
         }
     }
-    
-    fun getAudioFocusStatus(): String {
-        return _audioFocusState.value.name
+
+    fun requestAudioFocus(): Boolean {
+        if (hasFocus) return true
+
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+
+        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(audioAttributes)
+                .setOnAudioFocusChangeListener(focusChangeListener)
+                .build()
+            audioManager.requestAudioFocus(focusRequest!!)
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                focusChangeListener,
+                AudioManager.STREAM_ALARM,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+            )
+        }
+
+        return if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            hasFocus = true
+            true
+        } else {
+            hasFocus = false
+            false
+        }
     }
-    
-    enum class AudioFocusState {
-        NONE,
-        REQUESTED,
-        GRANTED,
-        LOST,
-        LOST_TRANSIENT
+
+    fun abandonAudioFocus() {
+        if (!hasFocus) return
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(focusChangeListener)
+        }
+        hasFocus = false
     }
 }

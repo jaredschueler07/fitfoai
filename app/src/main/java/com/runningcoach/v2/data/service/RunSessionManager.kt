@@ -68,7 +68,8 @@ class RunSessionManager(
         val newSession = RunSessionEntity(
             userId = currentUserId,
             startTime = sessionStartTime,
-            isCompleted = false
+            duration = 0L,
+            distance = 0f
         )
         
         scope.launch {
@@ -139,12 +140,11 @@ class RunSessionManager(
                     endTime = endTime,
                     duration = duration,
                     distance = finalMetrics.distance,
-                    averagePace = finalMetrics.averagePace,
-                    averageHeartRate = finalMetrics.averageHeartRate,
+                    avgPace = finalMetrics.averagePace,
+                    avgHeartRate = finalMetrics.averageHeartRate,
                     maxHeartRate = finalMetrics.maxHeartRate,
-                    caloriesBurned = finalMetrics.caloriesBurned,
-                    route = locationService.locationHistory.value.joinToString(";") { it.toJson() },
-                    isCompleted = true
+                    calories = finalMetrics.caloriesBurned,
+                    route = locationService.locationHistory.value.joinToString(";") { it.toJson() }
                 )
                 
                 runSessionDao.updateRunSession(updatedSession)
@@ -209,8 +209,8 @@ class RunSessionManager(
                 _currentSession.value?.let { session ->
                     val updatedSession = session.copy(
                         distance = distance,
-                        averagePace = averagePace,
-                        caloriesBurned = caloriesBurned
+                        avgPace = averagePace,
+                        calories = caloriesBurned
                     )
                     runSessionDao.updateRunSession(updatedSession)
                     _currentSession.value = updatedSession

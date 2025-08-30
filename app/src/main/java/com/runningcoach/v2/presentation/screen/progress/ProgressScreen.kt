@@ -3,6 +3,7 @@ package com.runningcoach.v2.presentation.screen.progress
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,11 +12,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.runningcoach.v2.presentation.components.AppCard
+import com.runningcoach.v2.presentation.components.CompactSourceBadge
+import com.runningcoach.v2.presentation.components.AppDataSource
+import com.runningcoach.v2.presentation.components.BadgeVariant
 import com.runningcoach.v2.presentation.theme.AppColors
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
+import com.runningcoach.v2.RunningCoachApplication
 
 @Composable
 fun ProgressScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: ProgressViewModel
 ) {
     LazyColumn(
         modifier = modifier
@@ -46,39 +55,37 @@ fun ProgressScreen(
         }
         
         item {
-            // Weekly Summary
+            val stats = viewModel.weeklyStats.collectAsState().value
             AppCard {
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
+                Column(Modifier.padding(20.dp)) {
                     Text(
-                        text = "This Week",
+                        text = "This Week (by Source)",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = AppColors.OnSurface
                     )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        ProgressItem(
-                            value = "7.8",
-                            unit = "mi",
-                            label = "Distance"
-                        )
-                        ProgressItem(
-                            value = "3",
-                            unit = "runs",
-                            label = "Sessions"
-                        )
-                        ProgressItem(
-                            value = "2:15",
-                            unit = "hrs",
-                            label = "Time"
-                        )
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CompactSourceBadge(source = AppDataSource.FITFOAI)
+                                Spacer(Modifier.width(6.dp))
+                                Text("${String.format("%.1f", stats.fitfoMiles)} mi", color = AppColors.Primary, fontWeight = FontWeight.Bold)
+                            }
+                            Text("${stats.fitfoRuns} runs", color = AppColors.Neutral500)
+                        }
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CompactSourceBadge(source = AppDataSource.GOOGLE_FIT)
+                                Spacer(Modifier.width(6.dp))
+                                Text("${String.format("%.1f", stats.fitMiles)} mi", color = AppColors.Primary, fontWeight = FontWeight.Bold)
+                            }
+                            Text("${stats.fitRuns} runs", color = AppColors.Neutral500)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("${String.format("%.1f", stats.totalMiles)} mi", color = AppColors.OnSurface, fontWeight = FontWeight.Bold)
+                            Text("${stats.totalRuns} total runs", color = AppColors.Neutral500)
+                        }
                     }
                 }
             }
@@ -119,41 +126,25 @@ fun ProgressScreen(
         }
         
         item {
-            // Recent Achievements
+            // Run History (latest 20)
             AppCard {
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
+                Column(Modifier.padding(20.dp)) {
                     Text(
-                        text = "Recent Achievements",
+                        text = "Recent Runs",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = AppColors.OnSurface
                     )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    AchievementItem(
-                        title = "Personal Best 5K",
-                        description = "New record: 24:32",
-                        date = "2 days ago"
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    AchievementItem(
-                        title = "Consistency Streak",
-                        description = "7 days running streak",
-                        date = "Today"
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    AchievementItem(
-                        title = "Distance Milestone",
-                        description = "Reached 62 miles total",
-                        date = "1 week ago"
-                    )
+                    Spacer(Modifier.height(12.dp))
+                    val items = viewModel.runItems.collectAsState().value
+                    if (items.isEmpty()) {
+                        Text("No runs yet", color = AppColors.Neutral400)
+                    } else {
+                        items.forEach { run ->
+                            RunHistoryRow(run)
+                            Spacer(Modifier.height(10.dp))
+                        }
+                    }
                 }
             }
         }
@@ -187,6 +178,23 @@ private fun ProgressItem(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.OnSurface
+        )
+    }
+}
+
+@Composable
+private fun RunHistoryRow(item: RunListItem) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Column(Modifier.weight(1f)) {
+            Text(item.date, style = MaterialTheme.typography.bodyMedium, color = AppColors.Neutral500)
+            Text(item.distanceMiles, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppColors.OnSurface)
+            Text(item.pacePerMile, style = MaterialTheme.typography.bodySmall, color = AppColors.Neutral500, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        CompactSourceBadge(
+            source = when (item.source) {
+                com.runningcoach.v2.domain.repository.SessionSource.GOOGLE_FIT -> AppDataSource.GOOGLE_FIT
+                else -> AppDataSource.FITFOAI
+            }
         )
     }
 }

@@ -196,6 +196,14 @@ com.runningcoach.v2/
 - **DI**: `aiChatAgent` uses GPT/Gemini per `AI_PROVIDER`; voice pipeline remains Gemini-backed.
 - **Config**: Set `AI_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL` in `local.properties`.
 
+### Spotify Integration (In Progress)
+- **Spotify SDK Integrated**: Native Android SDK for seamless in-app control.
+- **UI Controls**: Play/pause and playlist selection on `RunTrackingScreen`.
+- **Audio Ducking**: Music volume lowers during voice coaching and restores afterward.
+- **Workout-Aligned Playlist Generation**: Automated creation of BPM-matched playlists based on workout segments.
+- **Track Data Caching**: Room database caching for Spotify track BPM and duration to optimize API usage.
+- **Background Generation**: `WorkManager` integration for offloading playlist generation to a background thread.
+
 ### UI Components
 - **AppButton**: Consistent button styling across the app
 - **AppCard**: Card-based layout system with athletic blue theme
@@ -210,13 +218,14 @@ com.runningcoach.v2/
 ### Current Status - Production Ready (85%)
 - **P0 Blockers**: All resolved - background GPS, permissions, session recovery
 - **Voice Coaching**: Complete with 4 AI personalities and smart triggers
+- **Spotify Core Integration**: Core playback control, audio ducking, and intelligent playlist generation are implemented.
 - **Testing**: 159 comprehensive tests with 85%+ coverage on critical components
 - **Build System**: Production-ready with ProGuard/R8 optimization
 
 ### Current Limitations (15% remaining)
-- **Minor compilation fixes**: Some service implementations need final method completions
-- **Hilt Dependency Injection**: Temporarily disabled, using manual DI (AppModule pattern)
-- **Spotify Integration**: Planned for Sprint 3.3 (OAuth, BPM matching, playlist AI)
+- **Minor compilation fixes**: Some service implementations need final method completions.
+- **Hilt Dependency Injection**: Temporarily disabled, using manual DI (AppModule pattern).
+- **Spotify Integration Refinements**: Further UI/UX improvements, comprehensive error handling, and advanced playlist generation features (e.g., user preferences for genres).
 
 ### Technology Stack
 - **Build System**: Gradle with version catalogs (`gradle/libs.versions.toml`)
@@ -251,10 +260,10 @@ com.runningcoach.v2/
 - `project/SPRINT_3.3_SPOTIFY_INTEGRATION_PLAN.md`: Next sprint planning
 
 ### Next Development Phase - Sprint 3.3
-- **Spotify OAuth Integration**: Complete authentication and token management
-- **BPM Cadence Matching**: Music tempo analysis and cadence synchronization  
-- **AI Playlist Recommendations**: Intelligent music suggestions based on workout type
-- **Voice + Music Integration**: Seamless audio ducking and coaching timing
+- **Spotify Integration Refinements**: Further UI/UX improvements, comprehensive error handling, and advanced playlist generation features (e.g., user preferences for genres).
+- **BPM Cadence Matching**: Music tempo analysis and cadence synchronization (already started).
+- **AI Playlist Recommendations**: Intelligent music suggestions based on workout type (already started).
+- **Voice + Music Integration**: Seamless audio ducking and coaching timing (already started).
 - **Final Production Polish**: Complete app store submission preparation
 
 ## Common Development Patterns
@@ -305,3 +314,164 @@ com.runningcoach.v2/
 - Implement proper error handling for API rate limits
 
 This codebase represents a production-ready Android application with advanced background services, AI voice coaching, and comprehensive testing following modern development practices and clean architecture principles.
+
+## 🚨 Common LLM Coding Mistakes - Critical Learning Log
+
+**RULE**: This section MUST be updated every time a mistake is identified. Always check this list before making changes.
+
+### Health Connect Migration Mistakes
+
+18. **Referenced Non-Existent Database Dependencies** ⚠️
+    - **Mistake**: Using `HealthConnectDailySummaryEntity` and `healthConnectDao` before creating them
+    - **Impact**: Compilation errors, missing database infrastructure
+    - **Fix**: Always create database entities and DAOs before using them in managers
+    - **Occurred**: HealthConnectManager implementation - NEEDS IMMEDIATE FIX
+    - **Prevention**: Check all dependencies exist before using them in business logic
+
+### Database & Entity Mistakes
+
+1. **Property Name Inconsistencies** ⚠️
+   - **Mistake**: Using different property names between entities and domain models (`averageHeartRate` vs `avgHeartRate`)
+   - **Impact**: Compilation errors, data mapping failures
+   - **Fix**: Always align property names across all layers (Entity → Domain → UI)
+   - **Occurred**: Sprint 4.1, resolved by QA agent
+
+2. **Missing Required Fields in Constructor** ⚠️
+   - **Mistake**: Adding new fields to entities but forgetting to update all instantiation sites
+   - **Impact**: Compilation errors, runtime crashes
+   - **Fix**: Use IDE "Find Usages" to locate all constructor calls when adding fields
+   - **Occurred**: RunSessionEntity updates in Sprint 4.1
+
+3. **Invalid Flow Method Usage** ⚠️
+   - **Mistake**: Using `replayCache` and `value` on StateFlow incorrectly
+   - **Impact**: Compilation errors, incorrect data access patterns
+   - **Fix**: Use `first()` for single values, `collect` for observation
+   - **Occurred**: SettingsScreen.kt line 369, 385 - NEEDS FIX
+
+### API Integration Mistakes
+
+4. **Deprecated API Method Usage** ⚠️
+   - **Mistake**: Using `accessSessionsRead()/Write()` methods that don't exist in FitnessOptions
+   - **Impact**: Compilation errors, broken Google Fit integration
+   - **Fix**: Check Google Fit API documentation for current methods
+   - **Occurred**: GoogleFitManager initial implementation
+
+5. **Missing Import Statements** ⚠️
+   - **Mistake**: Creating new classes without proper imports, especially for WorkManager
+   - **Impact**: Unresolved reference errors
+   - **Fix**: Always verify imports when creating new files
+   - **Occurred**: GoogleFitSyncWorker implementation
+
+### Architecture Mistakes
+
+6. **Context Casting in Wrong Places** ⚠️
+   - **Mistake**: Casting Application context to ComponentActivity
+   - **Impact**: Runtime crashes on app startup
+   - **Fix**: Only create Activity-dependent services at Activity level
+   - **Occurred**: AppContainer PermissionManager setup
+
+7. **Database Singleton Pattern Violations** ⚠️
+   - **Mistake**: Creating multiple database instances instead of using singleton
+   - **Impact**: Data inconsistency, performance issues
+   - **Fix**: Always use `FITFOAIDatabase.getDatabase(context)` pattern
+   - **Occurred**: Sprint 3.4 AppContainer fixes
+
+### Type System Mistakes
+
+8. **Incorrect Type Conversions** ⚠️
+   - **Mistake**: Int/Float mismatches in heart rate data, pace calculations
+   - **Impact**: Compilation errors, data precision loss
+   - **Fix**: Use explicit type casting and check data types in entities
+   - **Occurred**: Multiple repository implementations
+
+9. **Enum Constant Replacement** ⚠️
+   - **Mistake**: Using hardcoded strings instead of proper enum constants
+   - **Impact**: Magic string usage, type safety loss
+   - **Fix**: Create proper enums and use constants
+   - **Occurred**: FitnessActivities.RUNNING → "running"
+
+### State Management Mistakes
+
+10. **Improper StateFlow Usage** ⚠️
+    - **Mistake**: Accessing `value` property on StateFlow instead of collecting
+    - **Impact**: Non-reactive UI, stale data
+    - **Fix**: Use `collectAsState()` in Compose, `collect` in ViewModels
+    - **Occurred**: Multiple ViewModel implementations
+
+11. **Missing DAO Methods** ⚠️
+    - **Mistake**: Calling DAO methods that don't exist (getActiveSession)
+    - **Impact**: Compilation errors, missing functionality
+    - **Fix**: Implement all required DAO methods before using them
+    - **Occurred**: RunSessionRepositoryImpl
+
+### Testing Mistakes
+
+12. **Package Name Mismatches in Tests** ⚠️
+    - **Mistake**: Using wrong package names in test files
+    - **Impact**: Test failures, incorrect package assertions
+    - **Fix**: Verify package names match actual app package structure
+    - **Occurred**: Initial test setup
+
+13. **Missing Test Coverage for Critical Paths** ⚠️
+    - **Mistake**: Not testing edge cases like null values, concurrent access
+    - **Impact**: Production bugs, data integrity issues
+    - **Fix**: Always test happy path, edge cases, and error scenarios
+    - **Prevention**: QA agent comprehensive test planning
+
+### Performance Mistakes
+
+14. **Main Thread Database Access** ⚠️
+    - **Mistake**: Performing database operations without Dispatchers.IO
+    - **Impact**: ANRs, poor user experience
+    - **Fix**: Always use `withContext(Dispatchers.IO)` for database operations
+    - **Prevention**: StrictMode detection in debug builds
+
+15. **Memory Leaks in Singletons** ⚠️
+    - **Mistake**: Storing Context references in static fields
+    - **Impact**: Memory leaks, potential crashes
+    - **Fix**: Use ApplicationContext and be careful with singleton lifecycle
+    - **Occurred**: GoogleFitManager singleton implementation
+
+### Build System Mistakes
+
+16. **Missing Gradle Dependencies** ⚠️
+    - **Mistake**: Using classes without adding required dependencies
+    - **Impact**: Compilation errors, missing functionality
+    - **Fix**: Check `libs.versions.toml` before using external libraries
+    - **Prevention**: Verify dependencies when importing new classes
+
+17. **Incorrect WorkManager Builder Syntax** ⚠️
+    - **Mistake**: Using wrong PeriodicWorkRequest constructor parameters
+    - **Impact**: Build failures in background services
+    - **Fix**: Use correct builder pattern for WorkManager
+    - **Occurred**: GoogleFitManager background sync setup
+
+### Self-Reflection Questions (Check Before Every Change):
+
+1. ❓ Did I verify all property names match between layers?
+2. ❓ Did I check that all required constructor parameters are provided?
+3. ❓ Did I use `first()` instead of `value` on StateFlow?
+4. ❓ Did I add `withContext(Dispatchers.IO)` for database operations?
+5. ❓ Did I check the API documentation for deprecated methods?
+6. ❓ Did I run a build test after making changes?
+7. ❓ Did I verify all imports are correct?
+8. ❓ Did I check for proper enum usage instead of magic strings?
+9. ❓ Did I test edge cases and null scenarios?
+10. ❓ Did I follow the existing code patterns in the file?
+
+### 🎯 Learning Protocol:
+- **BEFORE** making any change: Review mistakes #1-17 relevant to the task
+- **DURING** implementation: Stop if patterns match previous mistakes
+- **AFTER** error occurs: Add to this list with mistake details and fix
+- **WEEKLY** review: Analyze patterns and create prevention strategies
+
+This critical learning log ensures continuous improvement and prevents repeated mistakes across sprints.
+
+## Long Task Updates
+When working on complex or long-running tasks, provide periodic updates to keep the user informed:
+- Send updates on what you're currently doing and why
+- Report progress at significant milestones or decision points
+- Communicate when switching between major subtasks
+- Explain any unexpected issues or changes in approach
+- Keep updates concise but informative
+- If you encountered an error or issue, make sure you add to the common issues section. 

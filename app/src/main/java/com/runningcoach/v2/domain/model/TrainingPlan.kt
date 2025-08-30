@@ -1,5 +1,6 @@
 package com.runningcoach.v2.domain.model
 
+import kotlinx.serialization.Serializable
 import java.time.LocalDate
 
 data class TrainingPlan(
@@ -19,6 +20,7 @@ data class TrainingWeek(
     val focusArea: String
 )
 
+@Serializable
 data class Workout(
     val id: String,
     val name: String,
@@ -31,6 +33,7 @@ data class Workout(
     val scheduledDate: LocalDate? = null
 )
 
+@Serializable
 enum class WorkoutType {
     EASY_RUN,
     TEMPO_RUN,
@@ -42,6 +45,7 @@ enum class WorkoutType {
     CROSS_TRAINING
 }
 
+@Serializable
 enum class WorkoutIntensity {
     RECOVERY,
     EASY,
